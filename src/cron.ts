@@ -1,35 +1,30 @@
 /**
  * Cron task definitions — registered into the AppCronRoom DO at construction
  * time (worker.ts). The DO alarm fires `runTask(name, env)` on the schedule
- * declared here; the DO itself records executions, tracks history, and
- * pushes status to admin clients via the `/ws/cron/:roomId` WebSocket.
+ * declared here.
  *
  * Each task declares EITHER `intervalMinutes` (run every N minutes) OR
- * `schedule` + `timezone` (5-field cron expression). CronRoom validates
- * the config at construction time and throws on ambiguous declarations.
- *
- * Example:
- *
- *   import type { CronTask } from 'deepspace/worker'
- *   import { buildCronContext } from 'deepspace/worker'
- *
- *   export const tasks: CronTask[] = [
- *     { name: 'heartbeat', intervalMinutes: 1 },
- *     { name: 'daily-report', schedule: '0 9 * * *', timezone: 'America/New_York' },
- *   ]
- *
- *   export async function runTask(name: string, env: Env): Promise<void> {
- *     const ctx = buildCronContext(env, env.OWNER_USER_ID, `app:${env.DEEPSPACE_APP_ID}`)
- *     if (name === 'heartbeat') {
- *       // …
- *     }
- *   }
+ * `schedule` + `timezone` (5-field cron expression).
  */
 
 import type { CronTask } from 'deepspace/worker'
+import { buildCronContext } from 'deepspace/worker'
+import type { Env } from '../worker'
+import { generateBotPost } from './features/comms/ai'
 
-export const tasks: CronTask[] = []
+// How often a colony bot posts to the feed. Each post is one DeepSpace AI call (uses credits),
+// so don't go much lower than this except during the demo.
+const BOT_INTERVAL_MINUTES = 10
 
-export async function runTask(_name: string, _env: unknown): Promise<void> {
-  // No-op — implement your cron tasks here. Dispatch on `_name`.
+export const tasks: CronTask[] = [{ name: 'colony-bots', intervalMinutes: BOT_INTERVAL_MINUTES }]
+
+export async function runTask(name: string, env: Env): Promise<void> {
+  if (name !== 'colony-bots') return
+
+  const ctx = buildCronContext(env, env.OWNER_USER_ID, `app:${env.DEEPSPACE_APP_ID}`)
+  try {
+    await ctx.records.create('posts', await generateBotPost(env))
+  } catch (err) {
+    console.error('[colony-bots] could not post:', err)
+  }
 }
