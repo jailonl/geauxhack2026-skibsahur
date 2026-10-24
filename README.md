@@ -28,7 +28,8 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 
 - **Feed:** posts with photos/videos and optional location tags, updated in real time
 - **Map:** points of interest and hazards marked by coordinates (colony, hazard, resource, unknown moving object)
-- **Chat:** colony channels with light-delay for interplanetary messages
+- **Chat:** colony channels with real light-delay for interplanetary messages (calculated from where Earth and Mars are today), plus an AI operator on each channel whose reply returns after the full round trip
+- **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every few minutes in character, written by DeepSpace AI and clearly badged as bots
 - **Vitals:** personal health and supply readings with color-coded warnings
 - **Accessibility:** alt text on every photo/video, labeled form fields, keyboard-friendly controls
 
@@ -42,10 +43,10 @@ Rule 1 limit: 2 external APIs. DeepSpace is our backend-as-a-service and does no
 
 | API | Used for |
 | --- | --- |
-| _API #1 (e.g. NASA DONKI)_ | _what it's used for_ |
-| _API #2_ | _what it's used for_ |
+| DeepSpace AI (Claude Haiku via DeepSpace) | Writing colony bot posts and channel operator replies at runtime |
+| _API #2 (e.g. NASA DONKI)_ | _what it's used for_ |
 
-We do not use DeepSpace's built-in AI chat.
+AI is used only for text. No AI-generated images or videos appear anywhere in the app (Rule 3). If an AI call fails, bots fall back to scripted lines in `src/features/comms/bots.ts`.
 
 ### Boilerplate
 
@@ -68,6 +69,17 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/comms/PostComposer.tsx` | Generated starter code for the post form: guest posting, photo/video upload, location tag |
 | `src/features/comms/Feed.tsx` | Generated starter code for the live feed with delete for owners and admins |
 | `src/pages/(app)/feed.tsx` | Generated the feed page |
+| `src/features/comms/Feed.tsx` (update) | Added planet filter, bot badges, "Show bots" toggle, admin "Summon a bot" button |
+| `src/lib/space.ts` | Generated light-delay math (Earth/Mars circular-orbit approximation) and formatting helpers |
+| `src/features/comms/bots.ts` | Generated bot personas and scripted fallback lines |
+| `src/features/comms/ai.ts` | Generated DeepSpace AI calls for bot posts and operator replies |
+| `src/features/comms/channels.ts` | Generated chat channel and AI operator definitions |
+| `src/features/comms/Chat.tsx` | Generated the chat screen with light-delay countdowns and the "Ask operator" option |
+| `src/pages/(app)/chat.tsx` | Generated the chat page |
+| `src/schemas/transmissions-schema.ts` | Generated the chat messages schema |
+| `src/schemas/posts-schema.ts` (update) | Added the bot column and locked it from users |
+| `src/cron.ts` | Generated the scheduled job that posts a bot message every 10 minutes |
+| `src/actions/index.ts` | Generated server actions `summonBot` (admin) and `askOperator` (AI reply) |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 
@@ -96,4 +108,8 @@ Photo and video uploads only work after the app has been deployed once (`npx dee
 
 ## Extras
 
-_Data sources, credits for anything else used, and known limitations._
+**Science behind the light-delay:** Earth and Mars positions use circular-orbit approximations from their mean longitudes at J2000 (within about 10% of the true distance). One-way delay = distance ÷ speed of light. Earth–Moon delay uses the average distance of 384,400 km.
+
+**Facts the bots use:** Mars sol length (24 h 39 min 35 s), Curiosity's measured surface radiation (~0.67 mSv/day), ISS water recovery (~98%).
+
+**Known limitations:** local dev keeps its own data, so use the deployed link to see shared posts; photo/video uploads need one deploy before they work locally.

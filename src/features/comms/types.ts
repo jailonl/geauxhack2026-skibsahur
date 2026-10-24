@@ -1,5 +1,7 @@
 // Shape of one post's data. Matches the columns in src/schemas/posts-schema.ts.
-export type Body = 'earth' | 'moon' | 'mars' | 'station'
+import type { Body } from '../../lib/space'
+
+export type { Body }
 
 export type Post = {
   text: string
@@ -10,4 +12,5 @@ export type Post = {
   body?: Body
   lat?: number
   lng?: number
+  botKind?: 'system' | 'alien' // set only by colony bots
 }
