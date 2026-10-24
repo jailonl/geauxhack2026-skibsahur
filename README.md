@@ -6,11 +6,11 @@ A social network for people living off Earth: colonists post photos, videos, and
 
 - [Vilarian Breaux](https://github.com/) — Comms (feed, posts, media, chat)
 - [_Teammate_](https://github.com/) — Vitals
-- [_Teammate_](https://github.com/) — Points of interest map
+- [Jailon Living](https://github.com/) — Points of interest map
 
 ## About
 
-**Team name:** _team name_ · **Prompt:** _#_
+**Team name:Skib Sahur **Prompt:** _#_
 
 ### What we built and the problem it solves
 
