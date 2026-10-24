@@ -23,4 +23,5 @@ export const nav: NavItem[] = [
   // ── Features add nav items below this line ──
   { path: '/feed', label: 'Feed' },
   { path: '/chat', label: 'Chat' },
+  { path: '/map', label: 'Map' },
 ]

@@ -1,0 +1,73 @@
+// "/map" page. Same flow as my Java PoiForm: pick a tab (planet), click the map (lat/lng), fill the form.
+// It's in (app), not (protected), so guests can view the map; adding needs sign-in (see poi-schema.ts).
+import { useState } from 'react'
+import { useQuery } from 'deepspace'
+import type { Body } from '../../features/comms/types'
+import type { PointOfInterest } from '../../features/map/types'
+import { MAP_BODIES } from '../../features/map/poi-logic'
+import MapView from '../../features/map/MapView'
+import PoiForm from '../../features/map/PoiForm'
+
+const BODY_LABELS: Record<string, string> = { moon: 'Moon', mars: 'Mars', station: 'Station' }
+
+export default function MapPage() {
+  const [body, setBody] = useState<Body>('mars')
+  const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null)
+
+  // Live: new POIs from anyone show up without a refresh.
+  const { records, status, error } = useQuery<PointOfInterest>('pois', { where: { body } })
+
+  function onTab(next: Body) {
+    setBody(next)
+    setPicked(null)
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl space-y-4 p-4">
+      <h1 className="text-2xl font-bold">Points of Interest</h1>
+
+      <div role="tablist" aria-label="Planet" className="flex gap-2">
+        {MAP_BODIES.map((b) => (
+          <button
+            key={b}
+            type="button"
+            role="tab"
+            aria-selected={b === body}
+            onClick={() => onTab(b)}
+            className={`rounded-md border px-3 py-1 ${b === body ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
+          >
+            {BODY_LABELS[b]}
+          </button>
+        ))}
+      </div>
+
+      {status === 'error' && <p role="alert" className="text-destructive">Could not load the map: {error}</p>}
+
+      <MapView pois={records} picked={picked} onPick={(lat, lng) => setPicked({ lat, lng })} />
+
+      <PoiForm
+        body={body}
+        picked={picked}
+        onPick={(lat, lng) => setPicked({ lat, lng })}
+        existing={records.map((r) => r.data)}
+      />
+
+      <section>
+        <h2 className="mb-2 text-lg font-semibold">On {BODY_LABELS[body]}</h2>
+        {records.length === 0 ? (
+          <p className="text-muted-foreground">Nothing marked here yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {records.map(({ recordId, data: p }) => (
+              <li key={recordId} className="rounded-lg border bg-card p-3 text-sm">
+                <strong>{p.name}</strong> · {p.type} · {p.lat.toFixed(2)}, {p.lng.toFixed(2)}
+                {' · '}{p.safe ? 'safe' : 'not safe'}{p.discovered ? ' · near earlier find' : ' · new discovery'}
+                {p.description && <p className="mt-1 text-muted-foreground">{p.description}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
+  )
+}

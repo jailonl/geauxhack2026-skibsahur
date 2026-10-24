@@ -56,7 +56,10 @@ AI is used only for text. No AI-generated images or videos appear anywhere in th
 
 No AI was used to generate any image or video assets. All images in the app are created by our team. No external code sources were given to AI to reference.
 
-**Tool:** Claude (Anthropic), through the claude.ai chat app.
+
+**Tool:** Claude (Anthropic), through the claude.ai chat app and Claude Code.
+
+
 
 **Planning (no code):** brainstorming ideas for the prompt, choosing the stack, checking our plan against the rules and rubric, writing a build plan, and drafting this README.
 
@@ -83,7 +86,19 @@ No AI was used to generate any image or video assets. All images in the app are 
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 
-**Code (Points of interest):** _list AI-assisted files, or write "No AI used."_
+**Code (Points of interest, Jailon Living):**
+
+| File | What AI did |
+| --- | --- |
+| `src/schemas/poi-schema.ts` | Converted my Java `PointOfInterest` class (my fields: name, type, lat/lon, safe, discovered) into DeepSpace's schema format. AI added the `description` and `body` fields and the permissions. |
+| `src/features/map/types.ts` | Converted the same fields from my Java class into a TypeScript type |
+| `src/features/map/poi-logic.ts` | Ported my Java rules (discovered check, valid types, off-map check) to TypeScript |
+| `src/features/map/PoiForm.tsx` | Generated the React form from my Java `PoiForm` flow |
+| `src/features/map/MapView.tsx` | Generated the clickable map that plots POIs by lat/lng |
+| `src/pages/(app)/map.tsx` | Generated the map page with planet tabs, the form, and the POI list |
+| `src/nav.ts` | Added the Map link |
+
+I designed the POI data and logic in Java first (including the idea to work out "discovered" automatically from nearby POIs); AI turned it into React and TypeScript for this stack.
 
 Every team member has read and can explain all AI-assisted code. Changes made after the starter code are our own unless listed above.
 
