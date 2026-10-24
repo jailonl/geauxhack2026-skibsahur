@@ -1,12 +1,19 @@
 // Live list of posts. useQuery stays subscribed, so new posts from anyone appear instantly.
 // Signed-in users can delete their own posts; admins can delete any post (for removing spam).
+// The filter buttons show only posts tagged with one planet/station.
+import { useState } from 'react'
 import { useAuth, useMutations, useQuery, useR2Files, useUser } from 'deepspace'
-import type { Post } from './types'
+import type { Body, Post } from './types'
 
 const BODY_LABELS: Record<string, string> = { earth: 'Earth', moon: 'Moon', mars: 'Mars', station: 'Station' }
+const FILTERS: (Body | 'all')[] = ['all', 'mars', 'moon', 'earth', 'station']
 
 export default function Feed() {
+  const [filter, setFilter] = useState<Body | 'all'>('all')
+
   const { records, status, error } = useQuery<Post>('posts', {
+    // No "where" = every post; otherwise only posts tagged with that body.
+    ...(filter === 'all' ? {} : { where: { body: filter } }),
     orderBy: 'createdAt',
     orderDir: 'desc',
     limit: 50,
@@ -26,12 +33,34 @@ export default function Feed() {
     }
   }
 
-  if (status === 'loading') return <p className="text-muted-foreground">Loading transmissions...</p>
-  if (status === 'error') return <p role="alert" className="text-destructive">Could not load feed: {error}</p>
-  if (records.length === 0) return <p className="text-muted-foreground">No transmissions yet.</p>
-
   return (
     <div className="space-y-3">
+      <div role="group" aria-label="Filter posts by location" className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFilter(f)}
+            aria-pressed={filter === f}
+            className={
+              filter === f
+                ? 'rounded-full bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground'
+                : 'rounded-full border px-3 py-1 text-sm'
+            }
+          >
+            {f === 'all' ? 'All' : BODY_LABELS[f]}
+          </button>
+        ))}
+      </div>
+
+      {status === 'loading' && <p className="text-muted-foreground">Loading transmissions...</p>}
+      {status === 'error' && <p role="alert" className="text-destructive">Could not load feed: {error}</p>}
+      {status === 'ready' && records.length === 0 && (
+        <p className="text-muted-foreground">
+          {filter === 'all' ? 'No transmissions yet.' : `No posts tagged ${BODY_LABELS[filter]} yet.`}
+        </p>
+      )}
+
       {records.map((r) => {
         const post = r.data // your own fields live under .data
         const canDelete = ready && (isAdmin || (userId != null && r.createdBy === userId))
