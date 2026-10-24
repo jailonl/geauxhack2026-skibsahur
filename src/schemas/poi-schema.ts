@@ -17,7 +17,7 @@ export const poiSchema: CollectionSchema = {
     {
       name: 'body',
       storage: 'text',
-      interpretation: { kind: 'select', options: ['earth', 'moon', 'mars', 'station'] },
+      interpretation: { kind: 'select', options: ['earth', 'moon', 'mars', 'station', 'europa', 'titan', 'ceres', 'ganymede'] },
     },
     { name: 'lat', storage: 'number', interpretation: 'plain' },
     { name: 'lng', storage: 'number', interpretation: 'plain' },

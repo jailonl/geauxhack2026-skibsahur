@@ -2,12 +2,11 @@
 // so the user only fills in name, type, description, and safe. Discovered is figured out for them.
 import { useState } from 'react'
 import { useAuth, useMutations } from 'deepspace'
-import type { Body } from '../comms/types'
-import type { PoiType, PointOfInterest } from './types'
+import type { MapBody, PoiType, PointOfInterest } from './types'
 import { POI_TYPES, isAlreadyDiscovered, isOnMap } from './poi-logic'
 
 type Props = {
-  body: Body
+  body: MapBody
   picked: { lat: number; lng: number } | null
   onPick: (lat: number, lng: number) => void
   existing: PointOfInterest[] // POIs already on this planet, for the discovered check

@@ -2,16 +2,24 @@
 // It's in (app), not (protected), so guests can view the map; adding needs sign-in (see poi-schema.ts).
 import { useState } from 'react'
 import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
-import type { Body } from '../../features/comms/types'
-import type { PointOfInterest } from '../../features/map/types'
+import type { MapBody, PointOfInterest } from '../../features/map/types'
+import { findForum } from '../../features/forums/forums'
 import { MAP_BODIES } from '../../features/map/poi-logic'
 import MapView from '../../features/map/MapView'
 import PoiForm from '../../features/map/PoiForm'
 
-const BODY_LABELS: Record<string, string> = { moon: 'Moon', mars: 'Mars', station: 'Station' }
+const BODY_LABELS: Record<string, string> = {
+  moon: 'Moon',
+  mars: 'Mars',
+  station: 'Station',
+  europa: 'Europa',
+  titan: 'Titan',
+  ceres: 'Ceres',
+  ganymede: 'Ganymede',
+}
 
 export default function MapPage() {
-  const [body, setBody] = useState<Body>('mars')
+  const [body, setBody] = useState<MapBody>('mars')
   const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null)
 
   // Live: new POIs from anyone show up without a refresh.
@@ -32,7 +40,7 @@ export default function MapPage() {
     }
   }
 
-  function onTab(next: Body) {
+  function onTab(next: MapBody) {
     setBody(next)
     setPicked(null)
   }
@@ -41,19 +49,26 @@ export default function MapPage() {
     <main className="mx-auto max-w-3xl space-y-4 p-4">
       <h1 className="text-2xl font-bold">Points of Interest</h1>
 
-      <div role="tablist" aria-label="Planet" className="flex gap-2">
-        {MAP_BODIES.map((b) => (
-          <button
-            key={b}
-            type="button"
-            role="tab"
-            aria-selected={b === body}
-            onClick={() => onTab(b)}
-            className={`rounded-md border px-3 py-1 ${b === body ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
-          >
-            {BODY_LABELS[b]}
-          </button>
-        ))}
+      {/* Icon and color come from the matching forum, so the map and forums look the same. */}
+      <div role="tablist" aria-label="Planet" className="flex flex-wrap gap-2">
+        {MAP_BODIES.map((b) => {
+          const forum = findForum(b)
+          const selected = b === body
+          return (
+            <button
+              key={b}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => onTab(b)}
+              style={selected ? { backgroundColor: forum?.accent, borderColor: forum?.accent } : { borderColor: forum?.accent }}
+              className={`rounded-md border px-3 py-1 ${selected ? 'font-semibold text-black' : 'bg-background'}`}
+            >
+              {forum && <span aria-hidden="true">{forum.glyph} </span>}
+              {BODY_LABELS[b]}
+            </button>
+          )
+        })}
       </div>
 
       {status === 'error' && <p role="alert" className="text-destructive">Could not load the map: {error}</p>}
