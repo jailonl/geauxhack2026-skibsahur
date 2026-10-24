@@ -28,7 +28,7 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 
 - **Feed:** posts with photos/videos and optional location tags, updated in real time
 - **Map:** points of interest and hazards marked by coordinates (colony, hazard, resource, unknown moving object)
-- **Chat:** colony channels with real light-delay for interplanetary messages (calculated from where Earth and Mars are today), plus an AI operator on each channel whose reply returns after the full round trip
+- **Chat:** colony channels with real light-delay for interplanetary messages (calculated from where Earth and Mars are today), plus an AI operator on each channel that answers every message once it arrives, with the reply returning after the full round trip
 - **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every few minutes in character, written by DeepSpace AI and clearly badged as bots
 - **Vitals:** personal health and supply readings with color-coded warnings
 - **Accessibility:** alt text on every photo/video, labeled form fields, keyboard-friendly controls
@@ -72,14 +72,14 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/comms/Feed.tsx` (update) | Added planet filter, bot badges, "Show bots" toggle, admin "Summon a bot" button |
 | `src/lib/space.ts` | Generated light-delay math (Earth/Mars circular-orbit approximation) and formatting helpers |
 | `src/features/comms/bots.ts` | Generated bot personas and scripted fallback lines |
-| `src/features/comms/ai.ts` | Generated DeepSpace AI calls for bot posts and operator replies |
+| `src/features/comms/ai.ts` | Generated DeepSpace AI calls for bot posts and operator replies (with recent conversation context) |
 | `src/features/comms/channels.ts` | Generated chat channel and AI operator definitions |
-| `src/features/comms/Chat.tsx` | Generated the chat screen with light-delay countdowns and the "Ask operator" option |
+| `src/features/comms/Chat.tsx` | Generated the chat screen with light-delay countdowns and operator reply status |
 | `src/pages/(app)/chat.tsx` | Generated the chat page |
 | `src/schemas/transmissions-schema.ts` | Generated the chat messages schema |
 | `src/schemas/posts-schema.ts` (update) | Added the bot column and locked it from users |
-| `src/cron.ts` | Generated the scheduled job that posts a bot message every 10 minutes |
-| `src/actions/index.ts` | Generated server actions `summonBot` (admin) and `askOperator` (AI reply) |
+| `src/cron.ts` | Generated scheduled jobs: a bot post every 10 minutes (live app only), and operator replies to arrived chat messages every minute (max 3 per minute, using the last 8 messages as context) |
+| `src/actions/index.ts` | Generated the admin server action `summonBot` |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 

@@ -5,7 +5,7 @@ import type { CollectionSchema } from 'deepspace/schema'
 import { CHANNEL_IDS } from '../features/comms/channels'
 
 // Fields users may set. isOperator is left out so nobody can pose as a channel's AI.
-const FIELDS = ['channel', 'content', 'authorName', 'fromBody', 'deliverAt', 'speed']
+const FIELDS = ['channel', 'content', 'authorName', 'fromBody', 'deliverAt', 'speed', 'wantsReply']
 
 export const transmissionsSchema: CollectionSchema = {
   name: 'transmissions',
@@ -25,6 +25,8 @@ export const transmissionsSchema: CollectionSchema = {
     { name: 'speed', storage: 'number', interpretation: 'plain', default: 1 },
     // Set only by the server when a channel's AI operator replies.
     { name: 'isOperator', storage: 'number', interpretation: 'boolean' },
+    // 1 = waiting for the channel's AI operator to answer. The scheduled job sets it to 0 once handled.
+    { name: 'wantsReply', storage: 'number', interpretation: 'plain', default: 0 },
   ],
   permissions: {
     // Same rules as the feed: guests can read and send, signed-in users can delete their own, admins anything.

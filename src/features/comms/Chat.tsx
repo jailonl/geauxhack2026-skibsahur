@@ -1,10 +1,10 @@
 // Colony chat with real light-delay.
 // You pick where you're transmitting from. Messages to a channel on another planet are stored with an
 // arrival time (deliverAt) and show as "signal in transit" with a countdown until the light reaches it.
-// Signed-in users can also ask the channel's AI operator (DeepSpace AI), whose reply comes back after
-// the full round-trip delay.
+// Each channel's AI operator (DeepSpace AI) answers every message once it arrives; the reply then travels
+// back, so it shows up after the full round-trip delay. Replies come from the scheduled job in src/cron.ts.
 import { useEffect, useRef, useState } from 'react'
-import { getAuthToken, useAuth, useMutations, useQuery, useUser } from 'deepspace'
+import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
 import { BODY_LABELS, formatCountdown, formatDelay, lightDelaySeconds, type Body } from '../../lib/space'
 import { CHANNELS, type ChannelId } from './channels'
 
@@ -16,6 +16,7 @@ type Transmission = {
   deliverAt: number
   speed?: number
   isOperator?: boolean | number // set by the server on AI operator replies
+  wantsReply?: number // 1 = waiting for the operator to answer
 }
 
 const SPEEDS = [
@@ -60,7 +61,6 @@ export default function Chat() {
   const [speed, setSpeed] = useState(1)
   const [guestName, setGuestName] = useState(() => load('guestName', ''))
   const [text, setText] = useState('')
-  const [askOperator, setAskOperator] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -101,34 +101,21 @@ export default function Chat() {
     const authorName = isSignedIn ? user?.name ?? 'Unknown colonist' : guestName.trim() + ' (guest)'
     if (!isSignedIn) save('guestName', guestName.trim())
 
-    const content = text.trim()
     const deliverAt = Math.round(sentAt + delayMs)
     try {
-      await create({ channel: channelId, content, authorName, fromBody: myBody, deliverAt, speed })
+      await create({
+        channel: channelId,
+        content: text.trim(),
+        authorName,
+        fromBody: myBody,
+        deliverAt,
+        speed,
+        wantsReply: 1, // the channel's AI operator will answer once this arrives
+      })
       setText('')
+      setNotice(`${channel.operator} will answer once your signal arrives, and the reply has to travel back.`)
     } catch (err) {
       setError('Send failed: ' + (err instanceof Error ? err.message : String(err)))
-      return
-    }
-
-    // Ask the channel's AI operator to answer (server action in src/actions/index.ts).
-    if (askOperator && isSignedIn) {
-      setNotice(`${channel.operator} will answer once your signal arrives and the reply travels back.`)
-      try {
-        const res = await fetch('/api/actions/askOperator', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAuthToken()}` },
-          body: JSON.stringify({ channel: channelId, content, authorName, fromBody: myBody, speed, deliverAt }),
-        })
-        const result = await res.json()
-        if (!result.success) {
-          setNotice('')
-          setError(result.error ?? 'The operator did not answer.')
-        }
-      } catch (err) {
-        setNotice('')
-        setError('The operator did not answer: ' + (err instanceof Error ? err.message : String(err)))
-      }
     }
   }
 
@@ -228,7 +215,14 @@ export default function Chat() {
                     </p>
                   </>
                 ) : (
-                  <p className="mt-1 whitespace-pre-wrap">{m.content}</p>
+                  <>
+                    <p className="mt-1 whitespace-pre-wrap">{m.content}</p>
+                    {m.wantsReply === 1 && (
+                      <p className="mt-1 text-xs italic text-muted-foreground">
+                        Received at {channel.name}. {channel.operator} is composing a reply...
+                      </p>
+                    )}
+                  </>
                 )}
               </article>
             )
@@ -256,12 +250,7 @@ export default function Chat() {
                 ))}
               </select>
             </label>
-            {isSignedIn ? (
-              <label className="flex items-center gap-1">
-                <input type="checkbox" checked={askOperator} onChange={(e) => setAskOperator(e.target.checked)} />
-                Ask {channel.operator} (AI)
-              </label>
-            ) : (
+            {!isSignedIn && (
               <label>
                 Name{' '}
                 <input
