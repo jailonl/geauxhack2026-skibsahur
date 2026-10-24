@@ -113,6 +113,7 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/map/PoiForm.tsx` | Generated the React form from my Java `PoiForm` flow |
 | `src/features/map/MapView.tsx` | Generated the clickable map that plots POIs by lat/lng |
 | `src/pages/(app)/map.tsx` | Generated the map page with planet tabs, the form, the POI list, and remove for owners and admins |
+| `src/features/map/types.ts`, `poi-logic.ts`, `PoiForm.tsx`, `map.tsx`, `src/schemas/poi-schema.ts` (update) | Added Europa, Titan, Ceres, and Ganymede as map tabs (map-only list), with tab icons and colors taken from the forums |
 | `src/nav.ts` | Added the Map link |
 
 I designed the POI data and logic in Java first (including the idea to work out "discovered" automatically from nearby POIs); AI turned it into React and TypeScript for this stack.
