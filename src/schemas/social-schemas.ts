@@ -1,12 +1,17 @@
 // Social collections: planet forum threads, comments, up/down votes, and feed likes/reposts.
 import type { CollectionSchema } from 'deepspace/schema'
 
-const BODIES = ['earth', 'moon', 'mars', 'station']
+// Every forum slug in src/features/forums/forums.ts. The server rejects threads for any other forum.
+const FORUM_SLUGS = [
+  'mars', 'moon', 'earth', 'station',
+  'europa', 'titan', 'ceres', 'ganymede', 'kuiper', 'proxima',
+  'random', 'askacolonist', 'spacekitchen', 'hydroponics', 'signals', 'zerogmemes',
+]
 
 export const threadsSchema: CollectionSchema = {
   name: 'threads',
   columns: [
-    { name: 'forum', storage: 'text', interpretation: { kind: 'select', options: BODIES }, required: true },
+    { name: 'forum', storage: 'text', interpretation: { kind: 'select', options: FORUM_SLUGS }, required: true },
     { name: 'title', storage: 'text', interpretation: 'plain', required: true },
     { name: 'text', storage: 'text', interpretation: 'plain' },
     { name: 'authorName', storage: 'text', interpretation: 'plain' },

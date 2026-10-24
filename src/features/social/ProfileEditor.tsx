@@ -66,7 +66,7 @@ export default function ProfileEditor({ existing, onSaved }: { existing: Profile
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border bg-card p-4">
+    <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-4">
       {!existing && (
         <div>
           <h2 className="text-lg font-bold">Set up your colonist profile</h2>
@@ -108,7 +108,7 @@ export default function ProfileEditor({ existing, onSaved }: { existing: Profile
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={40}
             placeholder="Nova Rider"
-            className="mt-1 w-full rounded-md border bg-background p-2"
+            className="mt-1 w-full rounded-lg border border-border bg-background p-2"
           />
         </label>
       </div>
@@ -121,7 +121,7 @@ export default function ProfileEditor({ existing, onSaved }: { existing: Profile
           maxLength={160}
           rows={2}
           placeholder="Hydroponics lead at Jezero Base."
-          className="mt-1 w-full rounded-md border bg-background p-2"
+          className="mt-1 w-full rounded-lg border border-border bg-background p-2"
         />
       </label>
 
@@ -161,7 +161,7 @@ export default function ProfileEditor({ existing, onSaved }: { existing: Profile
       <button
         type="submit"
         disabled={!ready || saving || isUploading || !username.trim()}
-        className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50"
+        className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground disabled:opacity-50"
       >
         {saving ? 'Saving...' : existing ? 'Save profile' : 'Create profile'}
       </button>

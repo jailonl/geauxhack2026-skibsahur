@@ -12,11 +12,11 @@ export function SignInButtons() {
       <button
         type="button"
         onClick={() => signInWith('github')}
-        className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground"
+        className="rounded-full bg-primary px-4 py-2.5 font-bold text-primary-foreground"
       >
         Continue with GitHub
       </button>
-      <button type="button" onClick={() => signInWith('google')} className="rounded-md border px-4 py-2 font-semibold">
+      <button type="button" onClick={() => signInWith('google')} className="rounded-full border border-border px-4 py-2.5 font-bold hover:bg-accent">
         Continue with Google
       </button>
     </div>
@@ -51,12 +51,12 @@ export function SignInDialog({ onClose }: { onClose: () => void }) {
 export function SignInPrompt({ action }: { action: string }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-lg border border-dashed bg-card p-4 text-center">
+    <div className="rounded-2xl border border-dashed border-border bg-card p-5 text-center">
       <p className="mb-2 text-sm text-muted-foreground">You're browsing as a guest. Sign in to {action}.</p>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+        className="rounded-full bg-primary px-5 py-2 text-sm font-bold text-primary-foreground"
       >
         Sign in
       </button>

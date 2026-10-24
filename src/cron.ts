@@ -16,6 +16,9 @@ import { lightDelaySeconds, type Body } from './lib/space'
 
 // How often a colony bot posts to the feed. Each post is one DeepSpace AI call (uses credits).
 const BOT_INTERVAL_MINUTES = 10
+// Bot posts older than this are deleted so the feed and database stay fast (people's posts are never touched).
+const BOT_POST_LIFETIME_MS = 24 * 60 * 60_000
+const MAX_DELETES_PER_RUN = 25
 
 // AI operators answer direct messages. Capped per run so a spammer can't drain AI credits:
 // at most 3 replies a minute, and messages that waited more than 15 minutes are skipped.
@@ -59,6 +62,7 @@ export async function runTask(name: string, env: Env): Promise<void> {
     } catch (err) {
       console.error(`[colony-bots] could not post: ${describeError(err)}`)
     }
+    await deleteOldBotPosts(ctx)
     return
   }
 
@@ -166,5 +170,23 @@ async function recentHistory(ctx: Ctx, operator: Operator, userId: string, userN
   } catch (err) {
     console.error(`[operator-replies] could not load history: ${describeError(err)}`)
     return [] // answer without context rather than not at all
+  }
+}
+
+/** Remove bot posts older than a day, a few per run, so they never pile up. Only posts with a botKind. */
+async function deleteOldBotPosts(ctx: Ctx): Promise<void> {
+  try {
+    const cutoff = Date.now() - BOT_POST_LIFETIME_MS
+    const [system, alien] = (await Promise.all([
+      ctx.records.query('posts', { where: { botKind: 'system' }, limit: 300 }),
+      ctx.records.query('posts', { where: { botKind: 'alien' }, limit: 300 }),
+    ])) as [StoredRecord<unknown>[], StoredRecord<unknown>[]]
+    const old = [...system, ...alien]
+      .filter((r) => new Date(r.createdAt).getTime() < cutoff)
+      .slice(0, MAX_DELETES_PER_RUN)
+    for (const r of old) await ctx.records.delete('posts', r.recordId)
+    if (old.length > 0) console.log(`[colony-bots] cleaned up ${old.length} old bot post(s)`)
+  } catch (err) {
+    console.error(`[colony-bots] cleanup failed: ${describeError(err)}`)
   }
 }

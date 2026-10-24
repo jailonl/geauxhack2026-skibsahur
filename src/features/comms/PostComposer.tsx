@@ -3,7 +3,9 @@
 // Signed-in users can attach a photo/video and tag a location.
 import { useState } from 'react'
 import { useMutations, useR2Files } from 'deepspace'
+import { BODY_LABELS } from '../../lib/space'
 import ProfileEditor from '../social/ProfileEditor'
+import UserAvatar from '../social/UserAvatar'
 import { useMyProfile } from '../social/profiles'
 import { SignInPrompt } from '../social/SignIn'
 import type { Body, Post } from './types'
@@ -17,9 +19,11 @@ type Props = {
   placeholder?: string
   onDone?: () => void
   autoFocus?: boolean
+  compact?: boolean // starts as a one-line "What's happening?" bar and expands when focused
+  bare?: boolean // no border/background (used inside dialogs and the timeline header)
 }
 
-export default function PostComposer({ replyToId, quoteOfId, quotePreview, placeholder, onDone, autoFocus }: Props) {
+export default function PostComposer({ replyToId, quoteOfId, quotePreview, placeholder, onDone, autoFocus, compact, bare }: Props) {
   const { profile, isSignedIn, loading } = useMyProfile()
   const { ready, create } = useMutations<Post>('posts')
   const { upload, isUploading } = useR2Files({ scope: 'app' }) // 'app' scope = everyone can view
@@ -33,6 +37,7 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
   const [lng, setLng] = useState('')
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
+  const [expanded, setExpanded] = useState(!compact)
 
   if (!isSignedIn) return <SignInPrompt action={replyToId ? 'reply' : quoteOfId ? 'quote posts' : 'post'} />
   if (loading) return null
@@ -90,6 +95,7 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
       setShowLocation(false)
       setLat('')
       setLng('')
+      if (compact) setExpanded(false)
       onDone?.()
     } catch (err) {
       setError('Post failed: ' + (err instanceof Error ? err.message : String(err)))
@@ -98,33 +104,41 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
   }
 
   const busy = sending || isUploading
+  const home = BODY_LABELS[profile.homeBody ?? 'earth']
+  const fieldId = `post-text-${replyToId ?? quoteOfId ?? (compact ? 'home' : 'new')}`
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 rounded-lg border bg-card p-4">
-      <label htmlFor={`post-text-${replyToId ?? quoteOfId ?? 'new'}`} className="sr-only">
-        {isReply ? 'Reply' : 'Post'}
-      </label>
-      <textarea
-        id={`post-text-${replyToId ?? quoteOfId ?? 'new'}`}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={placeholder ?? (isReply ? 'Write your reply...' : quoteOfId ? 'Add your take...' : 'Transmit to the colony...')}
-        rows={isReply ? 2 : 3}
-        maxLength={280}
-        autoFocus={autoFocus}
-        className="w-full resize-y rounded-md border bg-background p-2"
-      />
+    <form onSubmit={onSubmit} className={bare ? 'space-y-3' : 'space-y-3 rounded-xl border border-border bg-card p-4'}>
+      <div className="flex gap-3">
+        <UserAvatar name={profile.username} avatarKey={profile.avatarKey} accent={profile.accent} size={40} />
+        <div className="min-w-0 flex-1">
+          <label htmlFor={fieldId} className="sr-only">{isReply ? 'Reply' : 'Post'}</label>
+          <textarea
+            id={fieldId}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onFocus={() => setExpanded(true)}
+            placeholder={placeholder ?? (isReply ? 'Post your reply' : quoteOfId ? 'Add your take' : `What's happening on ${home}?`)}
+            rows={expanded ? (isReply ? 2 : 3) : 1}
+            maxLength={280}
+            autoFocus={autoFocus}
+            className="w-full resize-none bg-transparent py-2 text-lg leading-snug outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+      </div>
 
-      {quotePreview}
+      {expanded && quotePreview}
+      {expanded && (
+      <>
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <label className="cursor-pointer underline">
+        <label className="cursor-pointer rounded-full border border-border px-3 py-1 hover:bg-accent">
           {file ? `Attached: ${file.name}` : 'Add photo or video'}
           <input type="file" accept="image/*,video/*" onChange={onPickFile} className="sr-only" />
         </label>
         {!isReply && (
-          <label className="flex items-center gap-1">
-            <input type="checkbox" checked={showLocation} onChange={(e) => setShowLocation(e.target.checked)} />
+          <label className="flex cursor-pointer items-center gap-1 rounded-full border border-border px-3 py-1 hover:bg-accent">
+            <input type="checkbox" checked={showLocation} onChange={(e) => setShowLocation(e.target.checked)} className="accent-[var(--color-primary)]" />
             Tag location
           </label>
         )}
@@ -161,14 +175,14 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
         <span className="text-sm text-muted-foreground">{text.length}/280</span>
         <div className="flex gap-2">
           {onDone && (
-            <button type="button" onClick={onDone} className="rounded-md border px-3 py-2 text-sm">
+            <button type="button" onClick={onDone} className="rounded-full border border-border px-4 py-2 text-sm">
               Cancel
             </button>
           )}
           <button
             type="submit"
             disabled={busy || !ready || !text.trim()}
-            className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50"
+            className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground disabled:opacity-50"
           >
             {busy ? 'Sending...' : isReply ? 'Reply' : quoteOfId ? 'Quote' : 'Post'}
           </button>
@@ -176,6 +190,8 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
       </div>
 
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      </>
+      )}
     </form>
   )
 }

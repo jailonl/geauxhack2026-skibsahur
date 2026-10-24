@@ -16,7 +16,7 @@ export default function UserAvatar({ name, avatarKey, accent, size = 40, emoji }
   const style = { width: size, height: size, boxShadow: `0 0 0 2px ${color}` }
 
   if (avatarKey) {
-    return <img src={getUrl(avatarKey)} alt="" className="shrink-0 rounded-full object-cover" style={style} />
+    return <img src={getUrl(avatarKey)} alt="" loading="lazy" decoding="async" className="shrink-0 rounded-full object-cover" style={style} />
   }
   return (
     <span

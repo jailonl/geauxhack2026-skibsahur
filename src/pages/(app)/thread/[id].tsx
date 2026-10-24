@@ -43,10 +43,10 @@ function CommentForm({ threadId, parentId, me, onDone }: { threadId: string; par
       />
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex gap-2">
-        <button type="submit" disabled={!ready || !text.trim()} className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+        <button type="submit" disabled={!ready || !text.trim()} className="rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground disabled:opacity-50">
           {parentId ? 'Reply' : 'Comment'}
         </button>
-        {onDone && <button type="button" onClick={onDone} className="rounded-md border px-3 py-1.5 text-sm">Cancel</button>}
+        {onDone && <button type="button" onClick={onDone} className="rounded-full border border-border px-4 py-1.5 text-sm">Cancel</button>}
       </div>
     </form>
   )
@@ -115,13 +115,13 @@ export default function ThreadPage() {
   const commentMutations = useMutations<Comment>('comments')
 
   const t = thread.records[0]
-  if (thread.status === 'loading') return <main className="p-4 text-muted-foreground">Loading...</main>
+  if (thread.status === 'loading') return <p className="p-6 text-muted-foreground">Loading...</p>
   if (!t) {
     return (
-      <main className="mx-auto max-w-3xl p-4">
+      <div className="mx-auto max-w-2xl p-6">
         <p className="text-muted-foreground">This thread was deleted.</p>
         <Link to="/forums" className="underline">Back to forums</Link>
-      </main>
+      </div>
     )
   }
 
@@ -140,10 +140,10 @@ export default function ThreadPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-4">
-      {forum && <Link to={`/forums/${forum.slug}`} className="text-sm underline">← {forum.name}</Link>}
+    <div className="mx-auto max-w-2xl space-y-4 p-4">
+      {forum && <Link to={`/forums/${forum.slug}`} className="text-sm text-muted-foreground hover:underline">← {forum.name}</Link>}
 
-      <article className="flex gap-3 rounded-lg border bg-card p-4" style={forum ? { borderTop: `4px solid ${forum.accent}` } : undefined}>
+      <article className="flex gap-3 rounded-xl border border-border bg-card p-4" style={forum ? { borderTop: `4px solid ${forum.accent}` } : undefined}>
         <VoteButtons id={t.recordId} votes={votes} enabled={Boolean(me)} label={t.data.title} />
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground">
@@ -182,6 +182,6 @@ export default function ThreadPage() {
           />
         ))}
       </ul>
-    </main>
+    </div>
   )
 }

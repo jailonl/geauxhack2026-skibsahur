@@ -1,13 +1,17 @@
-// "/u/:username" — a colonist's public profile: picture, bio, home planet, posts, and a Message button.
+// "/u/:username" — a colonist's profile: banner in their color, picture, bio, home world, live signal delay
+// from you to them, and tabs for Posts (including reposts), Replies, and Likes (your own profile only).
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth, useMutations, useUser } from 'deepspace'
-import { BODY_LABELS } from '../../../lib/space'
+import { ArrowLeft } from 'lucide-react'
+import { BODY_LABELS, PLANET_COLORS, formatDelay, lightDelaySeconds } from '../../../lib/space'
 import PostCard from '../../../features/comms/PostCard'
 import { useFeedData, useReactionActions } from '../../../features/comms/feedData'
-import type { Post } from '../../../features/comms/types'
+import type { Post, PostRecord } from '../../../features/comms/types'
 import UserAvatar from '../../../features/social/UserAvatar'
 import { DEFAULT_ACCENT, useMyProfile, useProfiles } from '../../../features/social/profiles'
+
+type Item = { key: string; post: PostRecord; at: string; repostedBy?: { label: string; href?: string } }
 
 export default function UserPage() {
   const { username = '' } = useParams()
@@ -22,84 +26,125 @@ export default function UserPage() {
   const isAdmin = user?.role === 'admin' || user?.isAdmin === true
 
   const person = profiles.byUsername.get(username.toLowerCase())
-  if (profiles.status === 'loading') return <main className="p-4 text-muted-foreground">Loading...</main>
+  if (profiles.status === 'loading') return <p className="p-6 text-muted-foreground">Loading profile...</p>
   if (!person) {
     return (
-      <main className="mx-auto max-w-2xl p-4">
-        <p className="text-muted-foreground">No colonist named @{username}.</p>
-        <Link to="/home" className="underline">Back to feed</Link>
-      </main>
+      <div className="mx-auto max-w-2xl p-6">
+        <p className="mb-2">No colonist named @{username}.</p>
+        <Link to="/home" className="text-primary hover:underline">Back to Home</Link>
+      </div>
     )
   }
 
   const accent = person.accent || DEFAULT_ACCENT
   const isMe = me?.userId === person.userId
+  const home = person.homeBody ?? 'earth'
   const theirs = feed.posts.filter((p) => p.createdBy === person.userId && !p.data.botKind)
-  const shown =
-    tab === 'posts'
-      ? theirs.filter((p) => !p.data.replyToId)
-      : tab === 'replies'
-        ? theirs.filter((p) => p.data.replyToId)
-        : feed.posts.filter((p) => feed.stats(p.recordId).myLikeId && isMe) // likes are only listed on your own profile
+  const label = isMe ? 'You' : `@${person.username}`
+
+  let items: Item[] = []
+  if (tab === 'posts') {
+    items = theirs.filter((p) => !p.data.replyToId).map((p) => ({ key: p.recordId, post: p, at: p.createdAt }))
+    for (const r of feed.reposts) {
+      if (r.createdBy !== person.userId) continue
+      const post = feed.byId.get(r.data.targetId)
+      if (post) items.push({ key: `repost-${r.recordId}`, post, at: r.createdAt, repostedBy: { label } })
+    }
+  } else if (tab === 'replies') {
+    items = theirs.filter((p) => p.data.replyToId).map((p) => ({ key: p.recordId, post: p, at: p.createdAt }))
+  } else {
+    items = feed.posts.filter((p) => feed.stats(p.recordId).myLikeId).map((p) => ({ key: p.recordId, post: p, at: p.createdAt }))
+  }
+  items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+
+  const postCount = theirs.filter((p) => !p.data.replyToId).length
+  const likesReceived = theirs.reduce((n, p) => n + feed.stats(p.recordId).likes, 0)
+  const tabs = (['posts', 'replies', ...(isMe ? ['likes'] : [])] as const) as readonly ('posts' | 'replies' | 'likes')[]
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-4">
-      <section className="overflow-hidden rounded-lg border bg-card">
-        <div className="h-24" style={{ background: `linear-gradient(135deg, ${accent}, transparent)` }} />
-        <div className="-mt-10 space-y-2 p-4">
-          <div className="flex items-end justify-between gap-2">
-            <UserAvatar name={person.username} avatarKey={person.avatarKey} accent={accent} size={80} />
+    <div className="mx-auto max-w-2xl">
+      <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-border bg-background/85 px-4 py-2 backdrop-blur">
+        <Link to="/home" aria-label="Back to Home" className="rounded-full p-2 hover:bg-accent">
+          <ArrowLeft className="h-5 w-5" aria-hidden />
+        </Link>
+        <div>
+          <h1 className="font-bold leading-tight">{person.displayName || person.username}</h1>
+          <p className="text-sm text-muted-foreground">{postCount} posts</p>
+        </div>
+      </header>
+
+      <section className="border-b border-border">
+        <div className="h-32 sm:h-40" style={{ background: `radial-gradient(120% 140% at 85% 0%, ${accent} 0%, transparent 60%), linear-gradient(180deg, ${PLANET_COLORS[home]}33, transparent)` }} />
+        <div className="px-4 pb-4">
+          <div className="-mt-12 flex items-end justify-between gap-2">
+            <span className="rounded-full bg-background p-1">
+              <UserAvatar name={person.username} avatarKey={person.avatarKey} accent={accent} size={96} />
+            </span>
             {isMe ? (
-              <Link to="/profile" className="rounded-md border px-3 py-1.5 text-sm">Edit profile</Link>
+              <Link to="/profile" className="rounded-full border border-border px-4 py-1.5 font-bold hover:bg-accent">Edit profile</Link>
             ) : (
-              <Link
-                to={`/messages?to=${person.username}`}
-                className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
-              >
+              <Link to={`/messages?to=${person.username}`} className="rounded-full bg-primary px-4 py-1.5 font-bold text-primary-foreground">
                 Message
               </Link>
             )}
           </div>
-          <div>
-            <h1 className="text-xl font-bold">{person.displayName || person.username}</h1>
-            <p className="text-sm text-muted-foreground">@{person.username}</p>
-          </div>
-          {person.bio && <p className="whitespace-pre-wrap">{person.bio}</p>}
-          <p className="text-sm text-muted-foreground">🏠 Lives on {BODY_LABELS[person.homeBody ?? 'earth']}</p>
+          <h2 className="mt-3 font-display text-xl font-bold">{person.displayName || person.username}</h2>
+          <p className="text-muted-foreground">@{person.username}</p>
+          {person.bio && <p className="mt-3 whitespace-pre-wrap">{person.bio}</p>}
+          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ background: PLANET_COLORS[home] }} />
+              Lives on {BODY_LABELS[home]}
+            </span>
+            {me && !isMe && (
+              <span>Your signal reaches them in {formatDelay(lightDelaySeconds(me.homeBody ?? 'earth', home))}</span>
+            )}
+          </p>
+          <p className="mt-2 text-sm">
+            <strong>{postCount}</strong> <span className="text-muted-foreground">posts</span>
+            <span className="mx-3" />
+            <strong>{likesReceived}</strong> <span className="text-muted-foreground">likes received</span>
+          </p>
         </div>
+
+        <nav role="tablist" aria-label="Profile sections" className="flex">
+          {tabs.map((t) => (
+            <button
+              key={t}
+              role="tab"
+              type="button"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={`relative flex-1 py-3 text-sm hover:bg-accent/40 ${tab === t ? 'font-bold' : 'text-muted-foreground'}`}
+            >
+              {t === 'posts' ? 'Posts' : t === 'replies' ? 'Replies' : 'Likes'}
+              {tab === t && <span aria-hidden className="absolute inset-x-1/3 bottom-0 h-1 rounded-full bg-primary" />}
+            </button>
+          ))}
+        </nav>
       </section>
 
-      <div role="tablist" aria-label="Profile sections" className="flex gap-2">
-        {(['posts', 'replies', ...(isMe ? ['likes'] : [])] as const).map((t) => (
-          <button
-            key={t}
-            role="tab"
-            type="button"
-            aria-selected={tab === t}
-            onClick={() => setTab(t as typeof tab)}
-            className={tab === t ? 'rounded-full bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1 text-sm'}
-          >
-            {t[0].toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {shown.length === 0 && <p className="text-muted-foreground">Nothing here yet.</p>}
-      {shown.map((p) => (
+      {items.length === 0 && (
+        <p className="px-4 py-10 text-center text-muted-foreground">
+          {tab === 'posts' ? (isMe ? 'You haven\'t posted yet.' : 'No posts yet.') : tab === 'replies' ? 'No replies yet.' : 'Posts you like show up here.'}
+        </p>
+      )}
+      {items.map((i) => (
         <PostCard
-          key={p.recordId}
-          post={p}
+          key={i.key}
+          post={i.post}
           profiles={profiles}
           feed={feed}
-          stats={feed.stats(p.recordId)}
-          canDelete={isAdmin || (userId != null && p.createdBy === userId)}
+          stats={feed.stats(i.post.recordId)}
+          canDelete={isAdmin || (userId != null && i.post.createdBy === userId)}
           canReact={Boolean(me)}
           onToggle={(postId, kind, existing) => void reactions.toggle(postId, kind, existing)}
           onDelete={async (postId) => {
             if (window.confirm('Delete this post?')) await remove(postId)
           }}
+          repostedBy={i.repostedBy}
         />
       ))}
-    </main>
+    </div>
   )
 }

@@ -27,6 +27,7 @@ export function useFeedData(limit = 150) {
     const postRecords = posts.records as PostRecord[]
     const reactionRecords = reactions.records as ReactionRecord[]
     const byId = new Map<string, PostRecord>()
+    const replies = new Map<string, PostRecord[]>() // parent id -> replies, oldest first
     const stats = new Map<string, PostStats>()
     const statsFor = (id: string) => {
       let s = stats.get(id)
@@ -36,7 +37,12 @@ export function useFeedData(limit = 150) {
 
     for (const p of postRecords) {
       byId.set(p.recordId, p)
-      if (p.data.replyToId) statsFor(p.data.replyToId).replies++
+      if (p.data.replyToId) {
+        statsFor(p.data.replyToId).replies++
+        const list = replies.get(p.data.replyToId) ?? []
+        list.unshift(p) // posts arrive newest-first, so unshift keeps replies oldest-first
+        replies.set(p.data.replyToId, list)
+      }
     }
     for (const r of reactionRecords) {
       const s = statsFor(r.data.targetId)
@@ -54,6 +60,7 @@ export function useFeedData(limit = 150) {
       posts: postRecords,
       reposts: reactionRecords.filter((r) => r.data.kind === 'repost'),
       byId,
+      repliesTo: (id: string) => replies.get(id) ?? [],
       stats: (id: string) => stats.get(id) ?? EMPTY_STATS,
       status: posts.status === 'error' || reactions.status === 'error' ? 'error' : posts.status,
       error: posts.error ?? reactions.error,

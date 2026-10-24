@@ -44,3 +44,116 @@
   --color-shell: #fafafa;
   --color-shell-panel: #ffffff;
 }
+
+/* Night side — the app's default. Deep blue-violet sky, starlight text, one amber action color.
+ * Planet colors (Mars, Moon, Earth, Orbit) live in src/lib/space.ts and carry meaning, not decoration. */
+[data-theme="nightside"] {
+  color-scheme: dark;
+  --color-background: #10132b;
+  --color-foreground: #eceaf6;
+  --color-card: #181c3a;
+  --color-card-foreground: #eceaf6;
+  --color-popover: #1d2245;
+  --color-popover-foreground: #eceaf6;
+  --color-primary: #ffb454;
+  --color-primary-foreground: #1d1305;
+  --color-secondary: #20254a;
+  --color-secondary-foreground: #eceaf6;
+  --color-muted: #20254a;
+  --color-muted-foreground: #9b9dba;
+  --color-accent: #262c57;
+  --color-accent-foreground: #eceaf6;
+  --color-destructive: #ff6b6b;
+  --color-destructive-foreground: #1d0505;
+  --color-border: #2b3060;
+  --color-input: #2b3060;
+  --color-ring: #ffb454;
+  --radius: 0.75rem;
+  --shadow-card: 0 1px 2px 0 rgba(4, 6, 20, 0.4);
+  --shadow-card-hover: 0 4px 16px 0 rgba(4, 6, 20, 0.5);
+  --color-shell: #0d1024;
+  --color-shell-panel: #181c3a;
+}
+
+/* Day side — light variant (Settings → Appearance). */
+[data-theme="dayside"] {
+  color-scheme: light;
+  --color-background: #f3f1fa;
+  --color-foreground: #171a33;
+  --color-card: #ffffff;
+  --color-card-foreground: #171a33;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #171a33;
+  --color-primary: #b45f06;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e7e4f3;
+  --color-secondary-foreground: #171a33;
+  --color-muted: #e7e4f3;
+  --color-muted-foreground: #565a7a;
+  --color-accent: #dedaf0;
+  --color-accent-foreground: #171a33;
+  --color-destructive: #c62828;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #d6d2ea;
+  --color-input: #d6d2ea;
+  --color-ring: #b45f06;
+  --radius: 0.75rem;
+  --shadow-card: 0 1px 2px 0 rgba(23, 26, 51, 0.06);
+  --shadow-card-hover: 0 4px 16px 0 rgba(23, 26, 51, 0.1);
+  --color-shell: #ebe8f6;
+  --color-shell-panel: #ffffff;
+}
+
+/* High contrast (Settings → Accessibility): stronger text and dividers on either theme. */
+[data-contrast="high"] {
+  --color-muted-foreground: #d7d8ea;
+  --color-border: #6f75b8;
+  --color-input: #6f75b8;
+}
+[data-theme="dayside"][data-contrast="high"] {
+  --color-muted-foreground: #2c2f4d;
+  --color-border: #6b6f9a;
+  --color-input: #6b6f9a;
+}
+
+/* Typography: Atkinson Hyperlegible (designed for low-vision readers) for reading; Unbounded for titles. */
+html {
+  font-family: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--app-font-size, 16px);
+}
+.font-display {
+  font-family: "Unbounded", "Atkinson Hyperlegible", ui-sans-serif, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Visible keyboard focus everywhere. */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* Reduce motion (Settings, or the system preference). */
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* The one moving thing: an in-transit signal pulse on the light-delay readout. */
+@keyframes signal-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.signal-pulse {
+  animation: signal-pulse 2.4s ease-in-out infinite;
+}
