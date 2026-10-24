@@ -1,4 +1,4 @@
-// DeepSpace AI: writes bot posts for the feed and replies from each chat channel's AI operator.
+// DeepSpace AI: writes bot posts for the feed and replies from the AI operators in direct messages.
 // Worker-only (imported by src/cron.ts and src/actions/index.ts). Calls are billed to the app owner's credits.
 // If an AI call fails, bot posts fall back to the scripted lines in bots.ts.
 import { createDeepSpaceAI } from 'deepspace/worker'
@@ -6,7 +6,7 @@ import { generateText } from 'ai'
 import type { Env } from '../../../worker'
 import { BODY_LABELS, formatDelay, lightDelaySeconds } from '../../lib/space'
 import { pickPersona, scriptedLine, toBotPost, type BotPost } from './bots'
-import type { Channel } from './channels'
+import type { Operator } from '../social/operators'
 
 const MODEL = 'claude-haiku-5-5' // fast and cheap: good for short in-character posts
 // Generous ceiling so the model never runs out of room before writing its answer. Billing is by actual
@@ -61,12 +61,12 @@ export async function generateBotPost(env: Env, now: number = Date.now()): Promi
 export type ChatLine = { authorName: string; content: string; fromBody: keyof typeof BODY_LABELS }
 
 /**
- * A channel operator's in-character reply to a colonist's message. `history` is the channel's recent
+ * An AI operator's in-character reply to a colonist's direct message. `history` is their recent
  * conversation (oldest first) so the operator can follow along. Returns null if the AI call fails.
  */
 export async function generateOperatorReply(
   env: Env,
-  channel: Channel,
+  operator: Operator,
   message: ChatLine,
   history: ChatLine[] = [],
   now: number = Date.now(),
@@ -75,20 +75,20 @@ export async function generateOperatorReply(
     const transcript = history
       .map((line) => `[${line.authorName}, from ${BODY_LABELS[line.fromBody]}]: ${line.content.slice(0, 300)}`)
       .join('\n')
-    const delay = lightDelaySeconds(message.fromBody, channel.body, now)
+    const delay = lightDelaySeconds(message.fromBody, operator.body, now)
     const ai = createDeepSpaceAI(env, 'anthropic')
     const { text, finishReason } = await generateText({
       model: ai(MODEL),
       maxOutputTokens: MAX_TOKENS,
       system:
-        `You are ${channel.operator}, ${channel.operatorVoice}, answering the "${channel.name}" comms channel ` +
-        `on ${BODY_LABELS[channel.body]}. The message came from ${BODY_LABELS[message.fromBody]}; ` +
+        `You are ${operator.name}, ${operator.voice}, at ${operator.place}, answering a direct message from ` +
+        `a colonist named ${message.authorName}. Their message came from ${BODY_LABELS[message.fromBody]}; ` +
         `it took ${formatDelay(delay)} to reach you and your reply takes as long to get back. ` +
         'Reply in under 300 characters, in character, helpful and friendly. No emoji. ' +
         'Never claim to be human. Stay consistent with these real facts when relevant:\n' +
         factSheet(now),
       prompt:
-        (transcript ? `Recent conversation on this channel, oldest first:\n${transcript}\n\n` : '') +
+        (transcript ? `Your recent conversation with them, oldest first:\n${transcript}\n\n` : '') +
         `New message to answer. ${message.authorName} says: ${message.content}`,
     })
     const reply = clean(text, 500)

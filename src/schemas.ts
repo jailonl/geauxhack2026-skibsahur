@@ -11,13 +11,20 @@ import type { CollectionSchema } from 'deepspace/schema'
 import { usersSchema } from './schemas/users-schema'
 import { settingsSchema } from './schemas/admin-schema'
 import { postsSchema } from './schemas/posts-schema'
-import { transmissionsSchema } from './schemas/transmissions-schema'
+import { profilesSchema } from './schemas/profiles-schema'
+import { dmsSchema } from './schemas/dms-schema'
+import { commentsSchema, reactionsSchema, threadsSchema, votesSchema } from './schemas/social-schemas'
 import { poiSchema } from './schemas/poi-schema'
 
 export const schemas: CollectionSchema[] = [
   usersSchema,
   settingsSchema,
   postsSchema,
-  transmissionsSchema,
+  profilesSchema,
+  reactionsSchema,
+  dmsSchema,
+  threadsSchema,
+  commentsSchema,
+  votesSchema,
   poiSchema,
 ]

@@ -12,5 +12,15 @@ export type Post = {
   body?: Body
   lat?: number
   lng?: number
+  replyToId?: string // set on replies
+  quoteOfId?: string // set on quote posts
   botKind?: 'system' | 'alien' // set only by colony bots
+}
+
+/** A post as it comes back from the database. */
+export type PostRecord = {
+  recordId: string
+  data: Post
+  createdBy: string
+  createdAt: string
 }

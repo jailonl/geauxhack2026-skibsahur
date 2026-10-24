@@ -9,9 +9,12 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { AuthOverlay, useAuthProfileReady, signOut } from 'deepspace'
-import { ChevronDown, LogOut, Menu, X } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuthProfileReady, signOut } from 'deepspace'
+import { ChevronDown, LogOut, Menu, Pencil, User, X } from 'lucide-react'
+import { SignInDialog } from '../features/social/SignIn'
+import { useMyProfile } from '../features/social/profiles'
+import UserAvatar from '../features/social/UserAvatar'
 import { APP_NAME } from '../constants'
 import type { Role } from '../constants'
 import { nav } from '../nav'
@@ -30,7 +33,9 @@ import {
 
 export default function Navigation() {
   const { isLoaded, isSignedIn, user, userLoading } = useAuthProfileReady({ requireUser: true })
+  const { profile } = useMyProfile()
   const location = useLocation()
+  const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
 
@@ -94,17 +99,21 @@ export default function Navigation() {
                     aria-label="Account menu"
                     className="group flex items-center gap-2 rounded-full border border-border bg-card/60 py-1 pl-1 pr-2.5 text-sm transition-colors hover:bg-card"
                   >
-                    <Avatar className="h-6 w-6 ring-1 ring-inset ring-border">
-                      <AvatarImage src={user.imageUrl ?? undefined} referrerPolicy="no-referrer" />
-                      <AvatarFallback className="text-[11px]">
-                        {(user.name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    {profile ? (
+                      <UserAvatar name={profile.username} avatarKey={profile.avatarKey} accent={profile.accent} size={24} />
+                    ) : (
+                      <Avatar className="h-6 w-6 ring-1 ring-inset ring-border">
+                        <AvatarImage src={user.imageUrl ?? undefined} referrerPolicy="no-referrer" />
+                        <AvatarFallback className="text-[11px]">
+                          {(user.name?.[0] ?? user.email?.[0] ?? '?').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <span
                       data-testid="nav-user-name"
                       className="hidden max-w-[140px] truncate text-foreground sm:inline"
                     >
-                      {user.name || user.email}
+                      {profile ? `@${profile.username}` : user.name || user.email}
                     </span>
                     <ChevronDown
                       className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-150 group-data-[popup-open]:rotate-180"
@@ -125,6 +134,17 @@ export default function Navigation() {
                     {user.email}
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {profile && (
+                  <DropdownMenuItem onClick={() => navigate(`/u/${profile.username}`)}>
+                    <User aria-hidden />
+                    My profile
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <Pencil aria-hidden />
+                  {profile ? 'Edit profile' : 'Set up profile'}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut()}>
                   <LogOut aria-hidden />
@@ -159,7 +179,7 @@ export default function Navigation() {
         )}
       </nav>
 
-      {showAuthModal && <AuthOverlay onClose={() => setShowAuthModal(false)} />}
+      {showAuthModal && <SignInDialog onClose={() => setShowAuthModal(false)} />}
     </>
   )
 }

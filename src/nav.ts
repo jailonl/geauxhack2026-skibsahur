@@ -17,11 +17,11 @@ export interface NavItem {
 
 export const nav: NavItem[] = [
   { path: '/home', label: 'Home' },
-  { path: '/settings', label: 'Settings' },
   // The /api-status debug page still exists — add
   // `{ path: '/api-status', label: 'API Status', devOnly: true }` to surface it.
   // ── Features add nav items below this line ──
-  { path: '/feed', label: 'Feed' },
-  { path: '/chat', label: 'Chat' },
+  { path: '/forums', label: 'Forums' },
+  { path: '/messages', label: 'Messages' },
   { path: '/map', label: 'Map' },
+  { path: '/settings', label: 'Settings', roles: ['admin'] },
 ]
