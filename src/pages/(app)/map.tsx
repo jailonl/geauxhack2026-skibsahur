@@ -1,7 +1,7 @@
 // "/map" page. Same flow as my Java PoiForm: pick a tab (planet), click the map (lat/lng), fill the form.
 // It's in (app), not (protected), so guests can view the map; adding needs sign-in (see poi-schema.ts).
 import { useState } from 'react'
-import { useQuery } from 'deepspace'
+import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
 import type { Body } from '../../features/comms/types'
 import type { PointOfInterest } from '../../features/map/types'
 import { MAP_BODIES } from '../../features/map/poi-logic'
@@ -16,6 +16,21 @@ export default function MapPage() {
 
   // Live: new POIs from anyone show up without a refresh.
   const { records, status, error } = useQuery<PointOfInterest>('pois', { where: { body } })
+
+  // Same rule as the feed: you can remove your own POIs, admins can remove any (see poi-schema.ts).
+  const { ready, remove } = useMutations<PointOfInterest>('pois')
+  const { userId } = useAuth()
+  const { user } = useUser()
+  const isAdmin = user?.role === 'admin' || user?.isAdmin === true
+
+  async function onDelete(recordId: string, name: string) {
+    if (!window.confirm(`Remove "${name}" from the map?`)) return
+    try {
+      await remove(recordId)
+    } catch (err) {
+      window.alert('Remove failed: ' + (err instanceof Error ? err.message : String(err)))
+    }
+  }
 
   function onTab(next: Body) {
     setBody(next)
@@ -58,13 +73,30 @@ export default function MapPage() {
           <p className="text-muted-foreground">Nothing marked here yet.</p>
         ) : (
           <ul className="space-y-2">
-            {records.map(({ recordId, data: p }) => (
-              <li key={recordId} className="rounded-lg border bg-card p-3 text-sm">
-                <strong>{p.name}</strong> · {p.type} · {p.lat.toFixed(2)}, {p.lng.toFixed(2)}
-                {' · '}{p.safe ? 'safe' : 'not safe'}{p.discovered ? ' · near earlier find' : ' · new discovery'}
-                {p.description && <p className="mt-1 text-muted-foreground">{p.description}</p>}
-              </li>
-            ))}
+            {records.map(({ recordId, createdBy, data: p }) => {
+              const canDelete = ready && (isAdmin || (userId != null && createdBy === userId))
+              return (
+                <li key={recordId} className="rounded-lg border bg-card p-3 text-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span>
+                      <strong>{p.name}</strong> · {p.type} · {p.lat.toFixed(2)}, {p.lng.toFixed(2)}
+                      {' · '}{p.safe ? 'safe' : 'not safe'}{p.discovered ? ' · near earlier find' : ' · new discovery'}
+                    </span>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(recordId, p.name)}
+                        className="text-sm text-destructive underline"
+                        aria-label={`Remove ${p.name}`}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  {p.description && <p className="mt-1 text-muted-foreground">{p.description}</p>}
+                </li>
+              )
+            })}
           </ul>
         )}
       </section>
