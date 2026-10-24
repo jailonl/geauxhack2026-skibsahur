@@ -22,4 +22,5 @@ export const nav: NavItem[] = [
   // `{ path: '/api-status', label: 'API Status', devOnly: true }` to surface it.
   // ── Features add nav items below this line ──
   { path: '/feed', label: 'Feed' },
+  { path: '/map', label: 'Map' },
 ]
