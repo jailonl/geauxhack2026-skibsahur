@@ -78,7 +78,10 @@ No AI was used to generate any image or video assets. All images in the app are 
 
 | File | What AI did |
 | --- | --- |
-| `src/schemas/poi-schema.ts` | Generated starter code for the points of interest collection schema, based on my Java `PointOfInterest` class |
+| `src/schemas/poi-schema.ts` | Converted my Java `PointOfInterest` class (my fields: name, type, lat/lon, safe, discovered) into DeepSpace's schema format. AI added the `description` and `body` fields and the permissions. |
+| `src/features/map/types.ts` | Converted the same fields from my Java class into a TypeScript type |
+
+I designed the POI data and logic in Java first; AI helped turn it into the structure this stack uses.
 
 Every team member has read and can explain all AI-assisted code. Changes made after the starter code are our own unless listed above.
 
