@@ -1,0 +1,149 @@
+// "/forums/:body" — one planet's board: thread list (Top or New) and a form to start a thread.
+import { useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { useMutations, useQuery } from 'deepspace'
+import VoteButtons from '../../../features/forums/VoteButtons'
+import { FORUMS, findForum, useVotes, type Comment, type Thread } from '../../../features/forums/forums'
+import ProfileEditor from '../../../features/social/ProfileEditor'
+import { useMyProfile, useProfiles } from '../../../features/social/profiles'
+import { SignInPrompt } from '../../../features/social/SignIn'
+
+function timeAgo(iso: string): string {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
+  if (s < 3600) return `${Math.max(1, Math.floor(s / 60))}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  return `${Math.floor(s / 86400)}d ago`
+}
+
+export default function ForumPage() {
+  const { body = '' } = useParams()
+  const forum = findForum(body)
+  const [sort, setSort] = useState<'top' | 'new'>('top')
+  const [showForm, setShowForm] = useState(false)
+  const [title, setTitle] = useState('')
+  const [text, setText] = useState('')
+  const [error, setError] = useState('')
+
+  const { profile: me, isSignedIn, loading } = useMyProfile()
+  const profiles = useProfiles()
+  const votes = useVotes()
+  const threads = useQuery<Thread>('threads', {
+    where: { forum: forum?.body ?? '__none__' },
+    orderBy: 'createdAt',
+    orderDir: 'desc',
+    limit: 200,
+  })
+  const comments = useQuery<Comment>('comments', { limit: 5000 })
+  const { ready, create } = useMutations<Thread>('threads')
+
+  if (!forum) {
+    return (
+      <main className="mx-auto max-w-3xl p-4">
+        <p>No such forum. Try {FORUMS.map((f) => f.name).join(', ')}.</p>
+      </main>
+    )
+  }
+
+  // Count comments once (one pass), not once per thread.
+  const counts = new Map<string, number>()
+  for (const c of comments.records) counts.set(c.data.threadId, (counts.get(c.data.threadId) ?? 0) + 1)
+  const commentCount = (threadId: string) => counts.get(threadId) ?? 0
+  const list = [...threads.records].sort((a, b) =>
+    sort === 'new'
+      ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      : votes.score(b.recordId) - votes.score(a.recordId) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
+
+  async function onCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim() || !me || !forum) return
+    try {
+      await create({ forum: forum.body, title: title.trim(), text: text.trim(), authorName: me.username })
+      setTitle('')
+      setText('')
+      setShowForm(false)
+      setError('')
+    } catch (err) {
+      setError('Could not post: ' + (err instanceof Error ? err.message : String(err)))
+    }
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl space-y-4 p-4">
+      <Link to="/forums" className="text-sm underline">← All forums</Link>
+      <header className="rounded-lg border bg-card p-4" style={{ borderTop: `6px solid ${forum.accent}` }}>
+        <h1 className="text-2xl font-bold">{forum.emoji} {forum.name}</h1>
+        <p className="text-muted-foreground">{forum.tagline}</p>
+      </header>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div role="group" aria-label="Sort threads" className="flex gap-2">
+          {(['top', 'new'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={sort === s}
+              onClick={() => setSort(s)}
+              className={sort === s ? 'rounded-full bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1 text-sm'}
+            >
+              {s === 'top' ? 'Top' : 'New'}
+            </button>
+          ))}
+        </div>
+        {me && (
+          <button type="button" onClick={() => setShowForm(!showForm)} className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">
+            {showForm ? 'Cancel' : 'New thread'}
+          </button>
+        )}
+      </div>
+
+      {!isSignedIn ? (
+        <SignInPrompt action="start threads, comment, and vote" />
+      ) : loading ? null : !me ? (
+        <ProfileEditor existing={null} />
+      ) : (
+        showForm && (
+          <form onSubmit={onCreate} className="space-y-2 rounded-lg border bg-card p-4">
+            <label className="block text-sm">
+              Title
+              <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className="mt-1 w-full rounded-md border bg-background p-2" />
+            </label>
+            <label className="block text-sm">
+              Text <span className="text-muted-foreground">(optional)</span>
+              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} maxLength={4000} className="mt-1 w-full rounded-md border bg-background p-2" />
+            </label>
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            <button type="submit" disabled={!ready || !title.trim()} className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50">
+              Post thread
+            </button>
+          </form>
+        )
+      )}
+
+      {threads.status === 'loading' && <p className="text-muted-foreground">Loading threads...</p>}
+      {threads.status === 'ready' && list.length === 0 && <p className="text-muted-foreground">No threads yet. Start the first one.</p>}
+
+      <ul className="space-y-2">
+        {list.map((t) => {
+          const author = profiles.byUserId.get(t.createdBy)
+          const n = commentCount(t.recordId)
+          return (
+            <li key={t.recordId} className="flex gap-3 rounded-lg border bg-card p-3">
+              <VoteButtons id={t.recordId} votes={votes} enabled={Boolean(me)} label={t.data.title} />
+              <div className="min-w-0">
+                <Link to={`/thread/${t.recordId}`} className="font-semibold hover:underline">{t.data.title}</Link>
+                {t.data.text && <p className="line-clamp-2 text-sm text-muted-foreground">{t.data.text}</p>}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  by{' '}
+                  {author ? <Link to={`/u/${author.username}`} className="underline">@{author.username}</Link> : `@${t.data.authorName ?? 'unknown'}`}
+                  {' · '}{timeAgo(t.createdAt)}{' · '}
+                  <Link to={`/thread/${t.recordId}`} className="underline">{n} {n === 1 ? 'comment' : 'comments'}</Link>
+                </p>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </main>
+  )
+}

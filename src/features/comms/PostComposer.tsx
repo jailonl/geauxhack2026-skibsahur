@@ -1,37 +1,29 @@
-// Form for writing a post.
-// Guests (not signed in) type a display name and can post text + an optional location tag.
-// Signed-in users also get photo/video upload, since DeepSpace requires sign-in for uploads.
+// Form for writing a post, a reply, or a quote post. Needs an account:
+// guests get a sign-in prompt, and new accounts set up their profile first.
+// Signed-in users can attach a photo/video and tag a location.
 import { useState } from 'react'
-import { useAuth, useMutations, useR2Files, useUser } from 'deepspace'
+import { useMutations, useR2Files } from 'deepspace'
+import ProfileEditor from '../social/ProfileEditor'
+import { useMyProfile } from '../social/profiles'
+import { SignInPrompt } from '../social/SignIn'
 import type { Body, Post } from './types'
 
 const MAX_FILE_MB = 15 // keeps uploads fast on hackathon Wi-Fi and under the free storage quota
-const GUEST_NAME_KEY = 'guestName'
 
-// Remember a guest's name in their browser so they don't retype it every post.
-// try/catch because browser storage can be blocked (private windows, strict settings).
-function loadGuestName(): string {
-  try {
-    return localStorage.getItem(GUEST_NAME_KEY) ?? ''
-  } catch {
-    return ''
-  }
-}
-function saveGuestName(name: string) {
-  try {
-    localStorage.setItem(GUEST_NAME_KEY, name)
-  } catch {
-    // ignore: the name just won't be remembered
-  }
+type Props = {
+  replyToId?: string
+  quoteOfId?: string
+  quotePreview?: React.ReactNode // the quoted post, shown inside the composer
+  placeholder?: string
+  onDone?: () => void
+  autoFocus?: boolean
 }
 
-export default function PostComposer() {
-  const { isSignedIn } = useAuth()
-  const { user } = useUser()
+export default function PostComposer({ replyToId, quoteOfId, quotePreview, placeholder, onDone, autoFocus }: Props) {
+  const { profile, isSignedIn, loading } = useMyProfile()
   const { ready, create } = useMutations<Post>('posts')
   const { upload, isUploading } = useR2Files({ scope: 'app' }) // 'app' scope = everyone can view
 
-  const [guestName, setGuestName] = useState(loadGuestName)
   const [text, setText] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [alt, setAlt] = useState('')
@@ -41,6 +33,12 @@ export default function PostComposer() {
   const [lng, setLng] = useState('')
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
+
+  if (!isSignedIn) return <SignInPrompt action={replyToId ? 'reply' : quoteOfId ? 'quote posts' : 'post'} />
+  if (loading) return null
+  if (!profile) return <ProfileEditor existing={null} />
+
+  const isReply = Boolean(replyToId)
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = e.target.files?.[0] ?? null
@@ -55,32 +53,28 @@ export default function PostComposer() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault() // stop the page from reloading
-    if (!text.trim() || !ready) return
-    if (!isSignedIn && !guestName.trim()) {
-      setError('Enter a display name to post as a guest.')
-      return
-    }
+    if (!text.trim() || !ready || !profile) return
 
     setSending(true)
     setError('')
     try {
-      const authorName = isSignedIn ? user?.name ?? 'Unknown colonist' : guestName.trim() + ' (guest)'
-      if (!isSignedIn) saveGuestName(guestName.trim())
+      const post: Post = {
+        text: text.trim(),
+        authorName: profile.username,
+        ...(replyToId ? { replyToId } : {}),
+        ...(quoteOfId ? { quoteOfId } : {}),
+      }
 
-      const post: Post = { text: text.trim(), authorName }
-
-      // 1. Upload the file first (signed-in users only), then save its key on the post.
-      if (isSignedIn && file) {
+      // 1. Upload the file first (if any), then save its key on the post.
+      if (file) {
         const result = await upload(file, file.name)
-        if (!result.success || !result.key) {
-          throw new Error(result.error ?? 'Upload failed')
-        }
+        if (!result.success || !result.key) throw new Error(result.error ?? 'Upload failed')
         post.mediaKey = result.key
         post.mediaType = file.type
         post.mediaAlt = alt.trim() || text.trim()
       }
 
-      // 2. Attach the location tag if the user filled it in.
+      // 2. Attach the location tag if filled in. Same { body, lat, lng } format as the map.
       if (showLocation && lat !== '' && lng !== '') {
         post.body = body
         post.lat = Number(lat)
@@ -96,6 +90,7 @@ export default function PostComposer() {
       setShowLocation(false)
       setLat('')
       setLng('')
+      onDone?.()
     } catch (err) {
       setError('Post failed: ' + (err instanceof Error ? err.message : String(err)))
     }
@@ -105,57 +100,41 @@ export default function PostComposer() {
   const busy = sending || isUploading
 
   return (
-    <form onSubmit={onSubmit} className="mb-6 space-y-3 rounded-lg border bg-card p-4">
-      {!isSignedIn && (
-        <div>
-          <label htmlFor="guest-name" className="block text-sm">Display name (posting as a guest)</label>
-          <input
-            id="guest-name"
-            value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
-            maxLength={30}
-            placeholder="Colonist_42"
-            className="w-full rounded-md border bg-background p-2"
-          />
-        </div>
-      )}
-
-      <label htmlFor="post-text" className="sr-only">Post text</label>
+    <form onSubmit={onSubmit} className="space-y-3 rounded-lg border bg-card p-4">
+      <label htmlFor={`post-text-${replyToId ?? quoteOfId ?? 'new'}`} className="sr-only">
+        {isReply ? 'Reply' : 'Post'}
+      </label>
       <textarea
-        id="post-text"
+        id={`post-text-${replyToId ?? quoteOfId ?? 'new'}`}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Transmit to the colony..."
-        rows={3}
+        placeholder={placeholder ?? (isReply ? 'Write your reply...' : quoteOfId ? 'Add your take...' : 'Transmit to the colony...')}
+        rows={isReply ? 2 : 3}
         maxLength={280}
+        autoFocus={autoFocus}
         className="w-full resize-y rounded-md border bg-background p-2"
       />
 
+      {quotePreview}
+
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        {isSignedIn ? (
-          <label className="cursor-pointer underline">
-            {file ? `Attached: ${file.name}` : 'Add photo or video'}
-            <input type="file" accept="image/*,video/*" onChange={onPickFile} className="sr-only" />
-          </label>
-        ) : (
-          <span className="text-muted-foreground">Sign in (top right) to attach photos or videos.</span>
-        )}
-        <label className="flex items-center gap-1">
-          <input type="checkbox" checked={showLocation} onChange={(e) => setShowLocation(e.target.checked)} />
-          Tag location
+        <label className="cursor-pointer underline">
+          {file ? `Attached: ${file.name}` : 'Add photo or video'}
+          <input type="file" accept="image/*,video/*" onChange={onPickFile} className="sr-only" />
         </label>
+        {!isReply && (
+          <label className="flex items-center gap-1">
+            <input type="checkbox" checked={showLocation} onChange={(e) => setShowLocation(e.target.checked)} />
+            Tag location
+          </label>
+        )}
       </div>
 
-      {isSignedIn && file && (
-        <div>
-          <label htmlFor="post-alt" className="block text-sm">Describe the image or video (for screen readers)</label>
-          <input
-            id="post-alt"
-            value={alt}
-            onChange={(e) => setAlt(e.target.value)}
-            className="w-full rounded-md border bg-background p-2"
-          />
-        </div>
+      {file && (
+        <label className="block text-sm">
+          Describe the image or video (for screen readers)
+          <input value={alt} onChange={(e) => setAlt(e.target.value)} className="mt-1 w-full rounded-md border bg-background p-2" />
+        </label>
       )}
 
       {showLocation && (
@@ -166,7 +145,7 @@ export default function PostComposer() {
               <option value="mars">Mars</option>
               <option value="moon">Moon</option>
               <option value="earth">Earth</option>
-              <option value="station">Station</option>
+              <option value="station">Orbital Station</option>
             </select>
           </label>
           <label>
@@ -180,13 +159,20 @@ export default function PostComposer() {
 
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{text.length}/280</span>
-        <button
-          type="submit"
-          disabled={busy || !ready || !text.trim()}
-          className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50"
-        >
-          {busy ? 'Sending...' : 'Post'}
-        </button>
+        <div className="flex gap-2">
+          {onDone && (
+            <button type="button" onClick={onDone} className="rounded-md border px-3 py-2 text-sm">
+              Cancel
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={busy || !ready || !text.trim()}
+            className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            {busy ? 'Sending...' : isReply ? 'Reply' : quoteOfId ? 'Quote' : 'Post'}
+          </button>
+        </div>
       </div>
 
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

@@ -1,16 +1,16 @@
 # Colony Comms
 
-A social network for people living off Earth: colonists post photos, videos, and reports from their surroundings, chat across planets with real light-delay, track their own vitals, and mark hazards and points of interest on a shared map.
+A social network for people living off Earth: colonists post photos, videos, and reports from their surroundings, reply to and quote each other, message across planets with real light-delay, discuss on per-planet forums, track their own vitals, and mark hazards and points of interest on a shared map.
 
 ## Team
 
-- [Vilarian Breaux](https://github.com/) — Comms (feed, posts, media, chat)
+- [Vilarian Breaux](https://github.com/) — Comms (feed, profiles, messages, forums, AI bots)
 - [Brandon Richard](https://github.com/) — Vitals
 - [Jailon Living](https://github.com/) — Points of interest map
 
 ## About
 
-**Team name:Skib Sahur **Prompt:** _#_
+**Team name:** Skib Sahur · **Prompt:** _#_
 
 ### What we built and the problem it solves
 
@@ -22,13 +22,17 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - [ ] Posts can be tagged with a location (body, latitude, longitude) and appear on the shared map
 - [ ] Users can mark points of interest and hazards on the map with a description
 - [ ] Users can see their own vitals, with warnings at real safety limits
-- [ ] Chat between colonies shows realistic light-delay for messages sent to other planets
+- [ ] Direct messages between colonists show realistic light-delay based on each person's home planet
+- [ ] Colonists have profiles and can reply to, quote, like, and repost each other's posts
+- [ ] Each location has its own forum for longer discussions
 
 ### Features
 
-- **Feed:** posts with photos/videos and optional location tags, updated in real time
+- **Home feed:** posts with photos/videos and optional location tags, updated in real time. Reply, quote, like, and repost; reposts appear in the timeline. Anyone can read; posting needs an account.
+- **Profiles:** unique @username, profile picture, bio, home planet, and accent color. Public profile pages list posts and replies, with a Message button.
+- **Messages:** private DMs by @username. Messages travel at light speed between the sender's and recipient's home planets, with a live countdown. AI operators (@hab-os on Mars, @shackleton-ops on the Moon, @capcom on Earth, @station-ai in orbit) answer every DM in character and remember the conversation.
+- **Planet forums:** Reddit-style boards (p/Mars, p/Moon, p/Earth, p/Station) with threads, comments, replies, and up/down votes, sorted by Top or New.
 - **Map:** points of interest and hazards marked by coordinates (colony, hazard, resource, unknown moving object)
-- **Chat:** colony channels with real light-delay for interplanetary messages (calculated from where Earth and Mars are today), plus an AI operator on each channel that answers every message once it arrives, with the reply returning after the full round trip
 - **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every few minutes in character, written by DeepSpace AI and clearly badged as bots
 - **Vitals:** personal health and supply readings with color-coded warnings
 - **Accessibility:** alt text on every photo/video, labeled form fields, keyboard-friendly controls
@@ -43,7 +47,7 @@ Rule 1 limit: 2 external APIs. DeepSpace is our backend-as-a-service and does no
 
 | API | Used for |
 | --- | --- |
-| DeepSpace AI (Claude Haiku via DeepSpace) | Writing colony bot posts and channel operator replies at runtime |
+| DeepSpace AI (Claude Haiku via DeepSpace) | Writing colony bot posts and AI operator DM replies at runtime |
 | _API #2 (e.g. NASA DONKI)_ | _what it's used for_ |
 
 AI is used only for text. No AI-generated images or videos appear anywhere in the app (Rule 3). If an AI call fails, bots fall back to scripted lines in `src/features/comms/bots.ts`.
@@ -76,13 +80,18 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/lib/space.ts` | Generated light-delay math (Earth/Mars circular-orbit approximation) and formatting helpers |
 | `src/features/comms/bots.ts` | Generated bot personas and scripted fallback lines |
 | `src/features/comms/ai.ts` | Generated DeepSpace AI calls for bot posts and operator replies (with recent conversation context) |
-| `src/features/comms/channels.ts` | Generated chat channel and AI operator definitions |
-| `src/features/comms/Chat.tsx` | Generated the chat screen with light-delay countdowns and operator reply status |
-| `src/pages/(app)/chat.tsx` | Generated the chat page |
-| `src/schemas/transmissions-schema.ts` | Generated the chat messages schema |
-| `src/schemas/posts-schema.ts` (update) | Added the bot column and locked it from users |
-| `src/cron.ts` | Generated scheduled jobs: a bot post every 10 minutes (live app only), and operator replies to arrived chat messages every minute (max 3 per minute, using the last 8 messages as context) |
+| `src/schemas/posts-schema.ts` (update) | Added the bot column, reply/quote links, and account-only posting |
+| `src/cron.ts` | Generated scheduled jobs: a bot post every 10 minutes (live app only), and AI operator replies to arrived DMs every minute (max 3 per minute, using the last 8 messages as context) |
 | `src/actions/index.ts` | Generated the admin server action `summonBot` |
+| `src/features/comms/PostCard.tsx`, `feedData.ts` | Generated the post card (reply, repost, quote, like, delete) and the shared feed data/counts |
+| `src/features/comms/PostComposer.tsx` (update) | Reworked for accounts, replies, and quote posts |
+| `src/pages/(app)/home.tsx`, `post/[id].tsx` | Generated the home feed page and the post-with-replies page |
+| `src/features/social/*` | Generated profiles (hooks, editor, avatar), GitHub/Google sign-in dialog, and AI operator definitions |
+| `src/pages/(app)/profile.tsx`, `u/[username].tsx` | Generated the edit-profile and public profile pages |
+| `src/features/messages/Messages.tsx`, `src/pages/(app)/messages.tsx` | Generated direct messages with light-delay and AI operator contacts |
+| `src/features/forums/*`, `src/pages/(app)/forums/*`, `src/pages/(app)/thread/[id].tsx` | Generated the planet forums: boards, threads, comments, votes |
+| `src/schemas/profiles-schema.ts`, `dms-schema.ts`, `social-schemas.ts` | Generated schemas for profiles, private DMs, likes/reposts, threads, comments, and votes |
+| `src/components/Navigation.tsx`, `src/pages/index.tsx` (updates) | Swapped in our sign-in dialog and profile menu; landing page opens the feed |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 
@@ -117,7 +126,9 @@ npm install
 npx deepspace dev start
 ```
 
-Open the local link it prints and go to **Feed**. Guests can post text; sign in to attach photos or videos.
+Open the local link it prints; it opens the feed. Guests can read everything; sign in to post, reply, message, or vote.
+
+Sign in with GitHub or Google; the first sign-in creates your account, then you pick a @username.
 
 Photo and video uploads only work after the app has been deployed once (`npx deepspace deploy`), because local uploads need a token that the first deploy creates.
 
