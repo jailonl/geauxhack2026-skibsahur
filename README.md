@@ -56,6 +56,9 @@ We do not use DeepSpace's built-in AI chat.
 No AI was used to generate any image or video assets. All images in the app are created by our team. No external code sources were given to AI to reference.
 
 
+**Tool:** Claude (Anthropic), through the claude.ai chat app
+
+
 
 **Planning (no code):** brainstorming ideas for the prompt, choosing the stack, checking our plan against the rules and rubric, writing a build plan, and drafting this README.
 
