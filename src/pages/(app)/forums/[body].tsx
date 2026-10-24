@@ -28,7 +28,7 @@ export default function ForumPage() {
   const profiles = useProfiles()
   const votes = useVotes()
   const threads = useQuery<Thread>('threads', {
-    where: { forum: forum?.body ?? '__none__' },
+    where: { forum: forum?.slug ?? '__none__' },
     orderBy: 'createdAt',
     orderDir: 'desc',
     limit: 200,
@@ -38,9 +38,10 @@ export default function ForumPage() {
 
   if (!forum) {
     return (
-      <main className="mx-auto max-w-3xl p-4">
-        <p>No such forum. Try {FORUMS.map((f) => f.name).join(', ')}.</p>
-      </main>
+      <div className="mx-auto max-w-2xl p-6">
+        <p className="mb-2">No board called {body}.</p>
+        <Link to="/forums" className="text-primary hover:underline">See all {FORUMS.length} forums</Link>
+      </div>
     )
   }
 
@@ -58,7 +59,7 @@ export default function ForumPage() {
     e.preventDefault()
     if (!title.trim() || !me || !forum) return
     try {
-      await create({ forum: forum.body, title: title.trim(), text: text.trim(), authorName: me.username })
+      await create({ forum: forum.slug, title: title.trim(), text: text.trim(), authorName: me.username })
       setTitle('')
       setText('')
       setShowForm(false)
@@ -69,12 +70,25 @@ export default function ForumPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-4">
-      <Link to="/forums" className="text-sm underline">← All forums</Link>
-      <header className="rounded-lg border bg-card p-4" style={{ borderTop: `6px solid ${forum.accent}` }}>
-        <h1 className="text-2xl font-bold">{forum.emoji} {forum.name}</h1>
-        <p className="text-muted-foreground">{forum.tagline}</p>
+    <div className="mx-auto max-w-2xl space-y-4 pb-8">
+      <header className="border-b border-border">
+        <div className="h-24" style={{ background: `radial-gradient(100% 160% at 15% 0%, ${forum.accent}66 0%, transparent 70%)` }} />
+        <div className="-mt-8 flex items-end gap-3 px-4 pb-4">
+          <span
+            aria-hidden
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-background text-2xl font-bold"
+            style={{ color: forum.accent, boxShadow: `inset 0 0 0 2px ${forum.accent}` }}
+          >
+            {forum.glyph}
+          </span>
+          <div className="min-w-0">
+            <Link to="/forums" className="text-sm text-muted-foreground hover:underline">Forums</Link>
+            <h1 className="font-display text-xl font-bold">{forum.name}</h1>
+            <p className="text-sm text-muted-foreground">{forum.tagline}</p>
+          </div>
+        </div>
       </header>
+      <div className="space-y-4 px-4">
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div role="group" aria-label="Sort threads" className="flex gap-2">
@@ -84,14 +98,14 @@ export default function ForumPage() {
               type="button"
               aria-pressed={sort === s}
               onClick={() => setSort(s)}
-              className={sort === s ? 'rounded-full bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground' : 'rounded-full border px-3 py-1 text-sm'}
+              className={sort === s ? 'rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground' : 'rounded-full border border-border px-4 py-1.5 text-sm hover:bg-accent'}
             >
               {s === 'top' ? 'Top' : 'New'}
             </button>
           ))}
         </div>
         {me && (
-          <button type="button" onClick={() => setShowForm(!showForm)} className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">
+          <button type="button" onClick={() => setShowForm(!showForm)} className="rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground">
             {showForm ? 'Cancel' : 'New thread'}
           </button>
         )}
@@ -103,7 +117,7 @@ export default function ForumPage() {
         <ProfileEditor existing={null} />
       ) : (
         showForm && (
-          <form onSubmit={onCreate} className="space-y-2 rounded-lg border bg-card p-4">
+          <form onSubmit={onCreate} className="space-y-3 rounded-xl border border-border bg-card p-4">
             <label className="block text-sm">
               Title
               <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className="mt-1 w-full rounded-md border bg-background p-2" />
@@ -113,7 +127,7 @@ export default function ForumPage() {
               <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} maxLength={4000} className="mt-1 w-full rounded-md border bg-background p-2" />
             </label>
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-            <button type="submit" disabled={!ready || !title.trim()} className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50">
+            <button type="submit" disabled={!ready || !title.trim()} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground disabled:opacity-50">
               Post thread
             </button>
           </form>
@@ -128,22 +142,23 @@ export default function ForumPage() {
           const author = profiles.byUserId.get(t.createdBy)
           const n = commentCount(t.recordId)
           return (
-            <li key={t.recordId} className="flex gap-3 rounded-lg border bg-card p-3">
+            <li key={t.recordId} className="flex gap-3 rounded-xl border border-border bg-card p-3 hover:bg-accent/30">
               <VoteButtons id={t.recordId} votes={votes} enabled={Boolean(me)} label={t.data.title} />
               <div className="min-w-0">
                 <Link to={`/thread/${t.recordId}`} className="font-semibold hover:underline">{t.data.title}</Link>
                 {t.data.text && <p className="line-clamp-2 text-sm text-muted-foreground">{t.data.text}</p>}
                 <p className="mt-1 text-xs text-muted-foreground">
                   by{' '}
-                  {author ? <Link to={`/u/${author.username}`} className="underline">@{author.username}</Link> : `@${t.data.authorName ?? 'unknown'}`}
+                  {author ? <Link to={`/u/${author.username}`} className="hover:underline">@{author.username}</Link> : `@${t.data.authorName ?? 'unknown'}`}
                   {' · '}{timeAgo(t.createdAt)}{' · '}
-                  <Link to={`/thread/${t.recordId}`} className="underline">{n} {n === 1 ? 'comment' : 'comments'}</Link>
+                  <Link to={`/thread/${t.recordId}`} className="hover:underline">{n} {n === 1 ? 'comment' : 'comments'}</Link>
                 </p>
               </div>
             </li>
           )
         })}
       </ul>
-    </main>
+      </div>
+    </div>
   )
 }

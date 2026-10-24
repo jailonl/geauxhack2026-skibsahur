@@ -8,8 +8,8 @@ export default function ProfilePage() {
   const { profile, isSignedIn, loading } = useMyProfile()
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-4">
-      <h1 className="text-2xl font-bold">Your profile</h1>
+    <div className="mx-auto max-w-2xl space-y-4 p-4">
+      <h1 className="font-display text-xl font-bold">Your profile</h1>
       {!isSignedIn ? (
         <SignInPrompt action="create your profile" />
       ) : loading ? (
@@ -19,12 +19,12 @@ export default function ProfilePage() {
           {/* key forces a fresh form once the profile loads */}
           <ProfileEditor key={profile?.recordId ?? 'new'} existing={profile} />
           {profile && (
-            <Link to={`/u/${profile.username}`} className="text-sm underline">
+            <Link to={`/u/${profile.username}`} className="text-sm text-primary hover:underline">
               View your public profile
             </Link>
           )}
         </>
       )}
-    </main>
+    </div>
   )
 }

@@ -20,6 +20,7 @@ import { Outlet } from 'react-router-dom'
 import { DeepSpaceAuthProvider, useAuthStatus } from 'deepspace'
 import { RecordProvider, RecordScope, AgentTools } from 'deepspace'
 import Navigation from '../../components/Navigation'
+import SocialProvider from '../../features/social/SocialProvider'
 import { useToast } from '@/components/ui'
 import { APP_NAME, SCOPE_ID } from '../../constants'
 import { schemas } from '../../schemas'
@@ -31,14 +32,17 @@ export default function AppLayout() {
           when <Seo> unmounts, so every route without <Seo> sets its own. */}
       <title>{APP_NAME}</title>
       <AuthBoot>
-        <div className="flex h-screen flex-col bg-background overflow-hidden">
+        <SocialProvider>
+        <div className="flex h-screen flex-col overflow-hidden bg-background md:flex-row md:justify-center">
           <Navigation />
-          <main className="flex-1 overflow-y-auto min-h-0">
+          {/* pb-24 leaves room for the phone tab bar and floating Post button */}
+          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-24 md:max-w-[1100px] md:pb-0">
             <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">Loading...</div>}>
               <Outlet />
             </Suspense>
           </main>
         </div>
+        </SocialProvider>
       </AuthBoot>
     </DeepSpaceAuthProvider>
   )

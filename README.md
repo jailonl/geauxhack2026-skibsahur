@@ -31,11 +31,13 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Home feed:** posts with photos/videos and optional location tags, updated in real time. Reply, quote, like, and repost; reposts appear in the timeline. Anyone can read; posting needs an account.
 - **Profiles:** unique @username, profile picture, bio, home planet, and accent color. Public profile pages list posts and replies, with a Message button.
 - **Messages:** private DMs by @username. Messages travel at light speed between the sender's and recipient's home planets, with a live countdown. AI operators (@hab-os on Mars, @shackleton-ops on the Moon, @capcom on Earth, @station-ai in orbit) answer every DM in character and remember the conversation.
-- **Planet forums:** Reddit-style boards (p/Mars, p/Moon, p/Earth, p/Station) with threads, comments, replies, and up/down votes, sorted by Top or New.
+- **Forums:** 16 Reddit-style boards in three groups: home worlds (p/Mars, p/Moon, p/Earth, p/Orbit), fictional outer colonies (Europa, Titan, Ceres, Ganymede, the Kuiper Belt, Proxima b), and lounges (p/Random, p/AskAColonist, p/SpaceKitchen, and more). Threads, comments, replies, up/down votes, Top/New sorting, and trending threads.
+- **Signal times:** a live panel showing how long a message from your home world takes to reach every colony right now, from 1.3 seconds (the Moon) to 4.2 years (Proxima b).
+- **Settings:** theme (Night side / Day side), text size, high contrast, reduce motion, compact posts, bandwidth saver (photos load on tap), bot visibility, read-aloud buttons, and default message speed.
 - **Map:** points of interest and hazards marked by coordinates (colony, hazard, resource, unknown moving object)
 - **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every few minutes in character, written by DeepSpace AI and clearly badged as bots
 - **Vitals:** personal health and supply readings with color-coded warnings
-- **Accessibility:** alt text on every photo/video, labeled form fields, keyboard-friendly controls
+- **Accessibility:** Atkinson Hyperlegible typeface (designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
 
 ### Tech stack
 
@@ -91,7 +93,13 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/messages/Messages.tsx`, `src/pages/(app)/messages.tsx` | Generated direct messages with light-delay and AI operator contacts |
 | `src/features/forums/*`, `src/pages/(app)/forums/*`, `src/pages/(app)/thread/[id].tsx` | Generated the planet forums: boards, threads, comments, votes |
 | `src/schemas/profiles-schema.ts`, `dms-schema.ts`, `social-schemas.ts` | Generated schemas for profiles, private DMs, likes/reposts, threads, comments, and votes |
-| `src/components/Navigation.tsx`, `src/pages/index.tsx` (updates) | Swapped in our sign-in dialog and profile menu; landing page opens the feed |
+| `src/components/Navigation.tsx` | Generated the left nav rail, phone tab bar, floating Post button, and account menu |
+| `src/pages/index.tsx` (update) | Landing page opens the feed |
+| `src/themes.css`, `src/themes.ts`, `index.html` (updates) | Generated the Night side / Day side themes, fonts, high-contrast and reduce-motion styles |
+| `src/features/settings/settings.ts`, `src/pages/(app)/preferences.tsx` | Generated the settings store and Settings page |
+| `src/features/home/SignalTimes.tsx`, `src/pages/(app)/home.tsx` (update) | Generated the Signal times panel and the home side column |
+| `src/features/comms/ComposeDialog.tsx` | Generated the pop-up post composer |
+| `src/lib/space.ts` (update) | Added Jupiter/Saturn light delays and planet colors |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 

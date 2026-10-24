@@ -5,16 +5,18 @@
  */
 
 import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { APP_NAME } from '../constants'
 import { seo } from '../seo'
 
 export default function Landing() {
+  const navigate = useNavigate()
   // Runs only in the browser (never during prerender), so the static HTML stays intact.
+  // Client-side navigation: switches straight to the feed without reloading the page.
   useEffect(() => {
-    window.location.replace('/home')
-  }, [])
+    navigate('/home', { replace: true })
+  }, [navigate])
 
   return (
     <>

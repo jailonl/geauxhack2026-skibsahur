@@ -4,7 +4,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutations, useQuery } from 'deepspace'
+import { Volume2 } from 'lucide-react'
 import { BODY_LABELS, formatCountdown, formatDelay, lightDelaySeconds, type Body } from '../../lib/space'
+import { speak, useSettings } from '../settings/settings'
 import ProfileEditor from '../social/ProfileEditor'
 import UserAvatar from '../social/UserAvatar'
 import { OPERATORS, findOperator, isOperatorId } from '../social/operators'
@@ -77,8 +79,9 @@ export default function Messages() {
   const { records, status } = useQuery<Dm>('dms', { orderBy: 'createdAt', orderDir: 'desc', limit: 500 })
   const { ready, create } = useMutations<Dm>('dms')
 
+  const settings = useSettings()
   const [text, setText] = useState('')
-  const [speed, setSpeed] = useState(1)
+  const [speed, setSpeed] = useState<number>(settings.defaultSpeed)
   const [lookup, setLookup] = useState('')
   const [error, setError] = useState('')
 
@@ -188,9 +191,9 @@ export default function Messages() {
             value={lookup}
             onChange={(e) => setLookup(e.target.value)}
             placeholder="@username"
-            className="min-w-0 flex-1 rounded-md border bg-background p-2 text-sm"
+            className="min-w-0 flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm"
           />
-          <button type="submit" className="rounded-md border px-3 text-sm">New</button>
+          <button type="submit" className="rounded-full border border-border px-4 text-sm font-bold hover:bg-accent">New</button>
         </form>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
@@ -211,7 +214,7 @@ export default function Messages() {
       </aside>
 
       {/* Conversation */}
-      <section className="flex min-w-0 flex-1 flex-col rounded-lg border bg-card">
+      <section className="flex min-w-0 flex-1 flex-col rounded-2xl border border-border bg-card">
         {!contact ? (
           <p className="p-6 text-muted-foreground">Pick a conversation, or start one with a @username.</p>
         ) : (
@@ -264,8 +267,13 @@ export default function Messages() {
                       ) : (
                         <>
                           <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                          <p className="mt-1 text-xs opacity-70">
+                          <p className="mt-1 flex items-center gap-2 text-xs opacity-70">
                             {mine ? 'Delivered' : 'Received'} {new Date(m.deliverAt).toLocaleTimeString()}
+                            {settings.readAloud && !mine && (
+                              <button type="button" onClick={() => speak(m.content)} aria-label="Read this message aloud" className="rounded-full p-0.5 hover:bg-accent">
+                                <Volume2 className="h-3.5 w-3.5" aria-hidden />
+                              </button>
+                            )}
                           </p>
                           {mine && contact.isOperator && m.wantsReply === 1 && (
                             <p className="mt-1 text-xs italic opacity-80">{contact.name} is composing a reply...</p>
@@ -288,9 +296,9 @@ export default function Messages() {
                   onChange={(e) => setText(e.target.value)}
                   maxLength={500}
                   placeholder={`Message @${contact.handle}...`}
-                  className="min-w-0 flex-1 rounded-md border bg-background p-2"
+                  className="min-w-0 flex-1 rounded-full border border-border bg-background px-4 py-2"
                 />
-                <button type="submit" disabled={!ready || !text.trim()} className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50">
+                <button type="submit" disabled={!ready || !text.trim()} className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground disabled:opacity-50">
                   Send
                 </button>
               </div>

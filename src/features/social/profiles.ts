@@ -1,5 +1,5 @@
 // Profiles: types, validation, and hooks to look people up by user id or @username.
-import { useMemo } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 import { useAuth, useQuery } from 'deepspace'
 import type { Body } from '../../lib/space'
 import { OPERATORS } from './operators'
@@ -28,8 +28,19 @@ export function usernameProblem(username: string): string | null {
   return null
 }
 
-/** Every profile, indexed both ways. Call once per page and pass it down, rather than once per card. */
-export function useProfiles() {
+export type Profiles = {
+  byUserId: Map<string, ProfileRecord>
+  byUsername: Map<string, ProfileRecord>
+  status: 'loading' | 'ready' | 'error'
+}
+
+const EMPTY: Profiles = { byUserId: new Map(), byUsername: new Map(), status: 'loading' }
+
+/** Shared by the whole app. Filled once by <SocialProvider> (one live subscription instead of one per component). */
+export const ProfilesContext = createContext<Profiles>(EMPTY)
+
+/** Load every profile once and index it both ways. Only <SocialProvider> calls this. */
+export function useProfilesQuery(): Profiles {
   const { records, status } = useQuery<Profile>('profiles', { limit: 1000 })
   return useMemo(() => {
     const byUserId = new Map<string, ProfileRecord>()
@@ -44,17 +55,20 @@ export function useProfiles() {
   }, [records, status])
 }
 
-export type Profiles = ReturnType<typeof useProfiles>
+/** Every profile, indexed by user id and by @username. */
+export function useProfiles(): Profiles {
+  return useContext(ProfilesContext)
+}
 
 /** The signed-in user's own profile (null if signed out or not set up yet). */
 export function useMyProfile() {
   const { isSignedIn, userId } = useAuth()
-  const { records, status } = useQuery<Profile>('profiles', {
-    where: { userId: userId ?? '__signed_out__' },
-    limit: 1,
-  })
-  const record = records[0]
-  const profile: ProfileRecord | null =
-    isSignedIn && userId && record ? { ...record.data, recordId: record.recordId, userId } : null
-  return { profile, isSignedIn: Boolean(isSignedIn), userId: userId ?? null, loading: isSignedIn && status === 'loading' }
+  const profiles = useContext(ProfilesContext)
+  const profile = isSignedIn && userId ? profiles.byUserId.get(userId) ?? null : null
+  return {
+    profile,
+    isSignedIn: Boolean(isSignedIn),
+    userId: userId ?? null,
+    loading: Boolean(isSignedIn) && profiles.status === 'loading',
+  }
 }

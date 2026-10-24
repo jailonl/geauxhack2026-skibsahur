@@ -1,12 +1,12 @@
 /**
  * Navigation Config
  *
- * Add one entry per nav item. Routes are handled by generouted
- * (file-based routing in src/pages/), this just controls what
- * appears in the navigation bar.
+ * One entry per nav item. Routes are handled by generouted (file-based routing in src/pages/);
+ * this just controls what appears in the navigation. Icons are matched by path in
+ * src/components/Navigation.tsx. "Profile" is added there because its link depends on who's signed in.
  */
 
-import type { Role } from './constants'
+type Role = 'viewer' | 'member' | 'admin'
 
 export interface NavItem {
   path: string
@@ -23,5 +23,6 @@ export const nav: NavItem[] = [
   { path: '/forums', label: 'Forums' },
   { path: '/messages', label: 'Messages' },
   { path: '/map', label: 'Map' },
-  { path: '/settings', label: 'Settings', roles: ['admin'] },
+  { path: '/preferences', label: 'Settings' },
+  { path: '/settings', label: 'Admin', roles: ['admin'] },
 ]

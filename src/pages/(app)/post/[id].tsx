@@ -1,6 +1,7 @@
-// "/post/:id" — one post with its full reply thread underneath.
-import { Link, useParams } from 'react-router-dom'
+// "/post/:id" — one post with the post it replies to above it and every reply below it.
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth, useMutations, useUser } from 'deepspace'
+import { ArrowLeft } from 'lucide-react'
 import PostCard from '../../../features/comms/PostCard'
 import PostComposer from '../../../features/comms/PostComposer'
 import { useFeedData, useReactionActions } from '../../../features/comms/feedData'
@@ -9,6 +10,7 @@ import { useMyProfile, useProfiles } from '../../../features/social/profiles'
 
 export default function PostPage() {
   const { id = '' } = useParams()
+  const navigate = useNavigate()
   const feed = useFeedData(500)
   const profiles = useProfiles()
   const { profile: me } = useMyProfile()
@@ -19,16 +21,16 @@ export default function PostPage() {
   const isAdmin = user?.role === 'admin' || user?.isAdmin === true
 
   const post = feed.byId.get(id)
-  const replies = feed.posts
-    .filter((p) => p.data.replyToId === id)
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) // oldest first, like a thread
+  const parent = post?.data.replyToId ? feed.byId.get(post.data.replyToId) : undefined
+  const replies = post ? feed.repliesTo(post.recordId) : []
 
   async function onDelete(postId: string) {
     if (!window.confirm('Delete this post?')) return
     await remove(postId)
+    if (postId === id) navigate('/home')
   }
 
-  const card = (p: PostRecord, linkToPost = true) => (
+  const card = (p: PostRecord, focused = false) => (
     <PostCard
       key={p.recordId}
       post={p}
@@ -39,28 +41,41 @@ export default function PostPage() {
       canReact={Boolean(me)}
       onToggle={(postId, kind, existing) => void reactions.toggle(postId, kind, existing)}
       onDelete={onDelete}
-      linkToPost={linkToPost}
+      linkToPost={!focused}
     />
   )
 
   return (
-    <main className="mx-auto max-w-2xl space-y-3 p-4">
-      <Link to="/home" className="text-sm underline">← Back to feed</Link>
+    <div className="mx-auto max-w-2xl">
+      <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-border bg-background/85 px-4 py-2 backdrop-blur">
+        <button type="button" onClick={() => navigate(-1)} aria-label="Back" className="rounded-full p-2 hover:bg-accent">
+          <ArrowLeft className="h-5 w-5" aria-hidden />
+        </button>
+        <h1 className="font-display text-lg font-bold">Thread</h1>
+      </header>
 
-      {feed.status === 'loading' && <p className="text-muted-foreground">Loading...</p>}
-      {feed.status === 'ready' && !post && <p className="text-muted-foreground">This post was deleted or is too old to show.</p>}
+      {feed.status === 'loading' && <p className="px-4 py-6 text-muted-foreground">Loading...</p>}
+      {feed.status === 'ready' && !post && (
+        <div className="px-4 py-10 text-center">
+          <p className="mb-2 text-muted-foreground">This post was deleted.</p>
+          <Link to="/home" className="text-primary hover:underline">Back to Home</Link>
+        </div>
+      )}
 
       {post && (
         <>
-          {post.data.replyToId && feed.byId.get(post.data.replyToId) && card(feed.byId.get(post.data.replyToId)!)}
-          {card(post, false)}
-          <PostComposer replyToId={post.recordId} placeholder="Post your reply..." />
-          <h2 className="pt-2 text-lg font-semibold">
-            {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
-          </h2>
-          {replies.map((r) => card(r))}
+          {parent && card(parent)}
+          {card(post, true)}
+          <div className="border-b border-border px-4 py-3">
+            <PostComposer replyToId={post.recordId} bare />
+          </div>
+          {replies.length === 0 ? (
+            <p className="px-4 py-8 text-center text-muted-foreground">No replies yet. Start the conversation.</p>
+          ) : (
+            replies.map((r) => card(r))
+          )}
         </>
       )}
-    </main>
+    </div>
   )
 }
