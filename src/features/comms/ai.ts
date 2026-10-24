@@ -9,7 +9,14 @@ import { pickPersona, scriptedLine, toBotPost, type BotPost } from './bots'
 import type { Channel } from './channels'
 
 const MODEL = 'claude-haiku-5-5' // fast and cheap: good for short in-character posts
-const MAX_TOKENS = 200
+// Generous ceiling so the model never runs out of room before writing its answer. Billing is by actual
+// usage, and the prompts ask for short replies, so this doesn't raise the normal cost.
+const MAX_TOKENS = 1000
+
+/** Turn any thrown value into one readable log string (Workers logs drop Error objects' messages). */
+export function describeError(err: unknown): string {
+  return err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+}
 
 /** Real facts the AI can draw on so posts stay grounded in actual space science. */
 function factSheet(now: number): string {
@@ -44,23 +51,33 @@ export async function generateBotPost(env: Env, now: number = Date.now()): Promi
     })
     const post = clean(text, 280)
     if (post) return toBotPost(persona, post)
+    console.warn('[ai] bot post came back empty, using scripted line')
   } catch (err) {
-    console.error('[ai] bot post failed, using scripted line:', err)
+    console.error(`[ai] bot post failed, using scripted line: ${describeError(err)}`)
   }
   return toBotPost(persona, scriptedLine(persona, now))
 }
 
-/** A channel operator's in-character reply to a colonist's message. Returns null if the AI call fails. */
+export type ChatLine = { authorName: string; content: string; fromBody: keyof typeof BODY_LABELS }
+
+/**
+ * A channel operator's in-character reply to a colonist's message. `history` is the channel's recent
+ * conversation (oldest first) so the operator can follow along. Returns null if the AI call fails.
+ */
 export async function generateOperatorReply(
   env: Env,
   channel: Channel,
-  message: { content: string; authorName: string; fromBody: keyof typeof BODY_LABELS },
+  message: ChatLine,
+  history: ChatLine[] = [],
   now: number = Date.now(),
 ): Promise<string | null> {
   try {
+    const transcript = history
+      .map((line) => `[${line.authorName}, from ${BODY_LABELS[line.fromBody]}]: ${line.content.slice(0, 300)}`)
+      .join('\n')
     const delay = lightDelaySeconds(message.fromBody, channel.body, now)
     const ai = createDeepSpaceAI(env, 'anthropic')
-    const { text } = await generateText({
+    const { text, finishReason } = await generateText({
       model: ai(MODEL),
       maxOutputTokens: MAX_TOKENS,
       system:
@@ -70,11 +87,15 @@ export async function generateOperatorReply(
         'Reply in under 300 characters, in character, helpful and friendly. No emoji. ' +
         'Never claim to be human. Stay consistent with these real facts when relevant:\n' +
         factSheet(now),
-      prompt: `${message.authorName} says: ${message.content}`,
+      prompt:
+        (transcript ? `Recent conversation on this channel, oldest first:\n${transcript}\n\n` : '') +
+        `New message to answer. ${message.authorName} says: ${message.content}`,
     })
-    return clean(text, 500) || null
+    const reply = clean(text, 500)
+    if (!reply) console.warn(`[ai] operator reply came back empty (finishReason: ${finishReason})`)
+    return reply || null
   } catch (err) {
-    console.error('[ai] operator reply failed:', err)
+    console.error(`[ai] operator reply failed: ${describeError(err)}`)
     return null
   }
 }
