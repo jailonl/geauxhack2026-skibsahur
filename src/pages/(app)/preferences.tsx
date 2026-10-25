@@ -63,7 +63,7 @@ export default function PreferencesPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <header className="border-b border-border px-4 py-4">
-        <h1 className="font-display text-xl font-bold">Settings</h1>
+        <h1 className="font-display text-3xl">Settings</h1>
         <p className="text-sm text-muted-foreground">Saved on this device.</p>
       </header>
 
@@ -93,6 +93,12 @@ export default function PreferencesPage() {
 
       <Section title="Accessibility">
         <Toggle label="High contrast" hint="Brighter secondary text and stronger dividers." checked={s.highContrast} onChange={(highContrast) => set({ highContrast })} />
+        <Toggle
+          label="Readable font"
+          hint="Switches all text to Atkinson Hyperlegible, a typeface designed for low-vision readers."
+          checked={s.readableFont}
+          onChange={(readableFont) => set({ readableFont })}
+        />
         <Toggle label="Reduce motion" hint="Turns off animations." checked={s.reduceMotion} onChange={(reduceMotion) => set({ reduceMotion })} />
         <Toggle
           label="Read-aloud buttons"

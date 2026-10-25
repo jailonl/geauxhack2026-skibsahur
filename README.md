@@ -35,9 +35,14 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Signal times:** a live panel showing how long a message from your home world takes to reach every colony right now, from 1.3 seconds (the Moon) to 4.2 years (Proxima b).
 - **Settings:** theme (Night side / Day side), text size, high contrast, reduce motion, compact posts, bandwidth saver (photos load on tap), bot visibility, read-aloud buttons, and default message speed.
 - **Map:** points of interest and hazards marked by coordinates (colony, hazard, resource, unknown moving object)
-- **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every few minutes in character, written by DeepSpace AI and clearly badged as bots
+- **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every 10 minutes in character and sometimes reply to people's posts, written by DeepSpace AI and clearly badged as bots
+- **Living forums:** twelve bot colonists (a Europa ice diver, a Titan dock worker, a Ceres welder, and more) start threads and comment in the forums every 20 minutes, always badged as bots. Admins can fill every board with starter conversations instantly (fixed text, no AI credits).
+- **Transmission cards:** every post shows which world it came from and how long its signal took to reach you.
+- **Colony pulse:** a live log of the latest posts, replies, threads, and comments across every world.
+- **Notifications:** a bell with an unread count for likes, reposts, quotes, replies, direct messages, and forum replies.
+- **Search:** colonists, posts, forums, and threads.
 - **Vitals:** personal health and supply readings with color-coded warnings
-- **Accessibility:** Atkinson Hyperlegible typeface (designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
+- **Accessibility:** a "Readable font" setting (Atkinson Hyperlegible, designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
 
 ### Tech stack
 
@@ -100,6 +105,13 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/home/SignalTimes.tsx`, `src/pages/(app)/home.tsx` (update) | Generated the Signal times panel and the home side column |
 | `src/features/comms/ComposeDialog.tsx` | Generated the pop-up post composer |
 | `src/lib/space.ts` (update) | Added Jupiter/Saturn light delays and planet colors |
+| `src/features/notifications/notifications.ts`, `src/pages/(app)/notifications.tsx` | Generated notifications (derived from existing data) and the Notifications page |
+| `src/pages/(app)/search.tsx` | Generated the search page |
+| `src/features/social/SocialProvider.tsx` (update) | Shares profiles, posts, reactions, DMs, and forum activity app-wide (one subscription each) |
+| `src/features/home/ColonyPulse.tsx` | Generated the live activity column |
+| `src/features/forums/colonists.ts`, `seed.ts`, `ForumAuthor.tsx` | Generated the bot colonist cast, starter forum conversations, and bot-aware author labels |
+| `src/features/comms/PostCard.tsx`, `Feed.tsx`, `src/components/Navigation.tsx` (redesign) | Generated the transmission-card design, world filter, and top navigation bar |
+| `src/features/comms/ai.ts`, `src/cron.ts`, `src/actions/index.ts` (updates) | Added AI bot replies, forum chatter, and the admin `seedForums` action |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 
@@ -112,7 +124,8 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/map/poi-logic.ts` | Ported my Java rules (discovered check, valid types, off-map check) to TypeScript |
 | `src/features/map/PoiForm.tsx` | Generated the React form from my Java `PoiForm` flow |
 | `src/features/map/MapView.tsx` | Generated the clickable map that plots POIs by lat/lng |
-| `src/pages/(app)/map.tsx` | Generated the map page with planet tabs, the form, and the POI list |
+| `src/pages/(app)/map.tsx` | Generated the map page with planet tabs, the form, the POI list, and remove for owners and admins |
+| `src/features/map/types.ts`, `poi-logic.ts`, `PoiForm.tsx`, `map.tsx`, `src/schemas/poi-schema.ts` (update) | Added Europa, Titan, Ceres, and Ganymede as map tabs (map-only list), with tab icons and colors taken from the forums |
 | `src/nav.ts` | Added the Map link |
 
 I designed the POI data and logic in Java first (including the idea to work out "discovered" automatically from nearby POIs); AI turned it into React and TypeScript for this stack.

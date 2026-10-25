@@ -266,7 +266,7 @@ export default function Messages() {
                         </>
                       ) : (
                         <>
-                          <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                          <p className="font-post whitespace-pre-wrap break-words">{m.content}</p>
                           <p className="mt-1 flex items-center gap-2 text-xs opacity-70">
                             {mine ? 'Delivered' : 'Received'} {new Date(m.deliverAt).toLocaleTimeString()}
                             {settings.readAloud && !mine && (

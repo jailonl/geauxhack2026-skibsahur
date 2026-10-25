@@ -116,14 +116,32 @@
   --color-input: #6b6f9a;
 }
 
-/* Typography: Atkinson Hyperlegible (designed for low-vision readers) for reading; Unbounded for titles. */
+/* Typography.
+ * Interface: Bricolage Grotesque, a characterful grotesque (names, nav, buttons, headings).
+ * Transmissions (post, thread, and message text): Literata, a screen serif, so posts read like dispatches.
+ * Settings → "Readable font" switches everything to Atkinson Hyperlegible (designed for low-vision readers). */
 html {
-  font-family: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  font-optical-sizing: auto;
   font-size: var(--app-font-size, 16px);
 }
 .font-display {
-  font-family: "Unbounded", "Atkinson Hyperlegible", ui-sans-serif, sans-serif;
-  letter-spacing: -0.01em;
+  font-family: "Bricolage Grotesque", ui-sans-serif, sans-serif;
+  font-stretch: 85%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.font-post {
+  font-family: "Literata", Georgia, serif;
+  font-optical-sizing: auto;
+  line-height: 1.55;
+}
+[data-font="readable"],
+[data-font="readable"] .font-display,
+[data-font="readable"] .font-post {
+  font-family: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  font-stretch: 100%;
+  letter-spacing: 0;
 }
 
 /* Visible keyboard focus everywhere. */
