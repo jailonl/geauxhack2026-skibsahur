@@ -1,27 +1,13 @@
-// "Signal times": how long a message from your home world takes to reach every colony, right now.
-// Planet positions move, so the Mars/Jupiter/Saturn numbers change from day to day.
+// "Signal times": how long a message from your home world takes to reach a handful of places, right now.
+// Planets move, so the numbers change from day to day. The full any-to-any version is the Signal map page.
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Block from '../../components/Block'
-import {
-  BODY_LABELS, PLANET_COLORS, PROXIMA_SECONDS, earthToOuterPlanetSeconds, formatLongDelay, lightDelaySeconds, type Body,
-} from '../../lib/space'
+import { BODY_LABELS, PLANET_COLORS, formatDelay, lightDelaySeconds, type Place } from '../../lib/space'
 
-type Row = { name: string; where: string; color: string; seconds: number }
+const SHOWN: Place[] = ['earth', 'moon', 'mars', 'europa', 'titan', 'proxima', 'alphacen']
 
-function rowsFrom(home: Body, now: number): Row[] {
-  const near: Row[] = (['mars', 'moon', 'earth', 'station'] as Body[])
-    .filter((b) => b !== home)
-    .map((b) => ({ name: BODY_LABELS[b], where: b === 'station' ? 'Low Earth orbit' : b === 'moon' ? 'Shackleton Outpost' : b === 'mars' ? 'Jezero Base' : 'Mission Control', color: PLANET_COLORS[b], seconds: lightDelaySeconds(home, b, now) }))
-  // From Mars, the outer colonies are roughly as far as from Earth at this scale; we use Earth's distance.
-  const far: Row[] = [
-    { name: 'Europa', where: 'Jupiter system', color: '#7dd3fc', seconds: earthToOuterPlanetSeconds('jupiter', now) },
-    { name: 'Titan', where: 'Saturn system', color: '#f59e0b', seconds: earthToOuterPlanetSeconds('saturn', now) },
-    { name: 'Proxima b', where: 'Another star', color: '#f472b6', seconds: PROXIMA_SECONDS },
-  ]
-  return [...near, ...far]
-}
-
-export default function SignalTimes({ home }: { home: Body }) {
+export default function SignalTimes({ home }: { home: Place }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 30_000) // distances change slowly
@@ -42,17 +28,15 @@ export default function SignalTimes({ home }: { home: Body }) {
         One-way light delay from <span style={{ color: PLANET_COLORS[home] }}>{BODY_LABELS[home]}</span>, right now.
       </p>
       <ul className="space-y-2">
-        {rowsFrom(home, now).map((r) => (
-          <li key={r.name} className="flex items-center gap-2.5">
-            <span aria-hidden className="h-2.5 w-2.5 shrink-0" style={{ background: r.color }} />
-            <span className="min-w-0 flex-1">
-              <span className="block leading-tight">{r.name}</span>
-              <span className="block text-xs text-muted-foreground">{r.where}</span>
-            </span>
-            <span className="font-signal tabular-nums text-primary">{formatLongDelay(r.seconds)}</span>
+        {SHOWN.filter((p) => p !== home).map((p) => (
+          <li key={p} className="flex items-center gap-2.5">
+            <span aria-hidden className="h-2.5 w-2.5 shrink-0" style={{ background: PLANET_COLORS[p] }} />
+            <span className="min-w-0 flex-1 leading-tight">{BODY_LABELS[p]}</span>
+            <span className="font-signal tabular-nums text-primary">{formatDelay(lightDelaySeconds(home, p, now))}</span>
           </li>
         ))}
       </ul>
+      <Link to="/signals" className="font-signal mt-3 inline-block text-primary hover:underline">[ Open the signal map ]</Link>
     </Block>
   )
 }

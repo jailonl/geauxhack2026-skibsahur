@@ -1,8 +1,10 @@
 // Form for writing a post, a reply, or a quote post. Needs an account:
 // guests get a sign-in prompt, and new accounts set up their profile first.
-// Signed-in users can attach a photo/video and tag a location.
-import { useState } from 'react'
+// Signed-in users can attach a photo/video (with a preview before posting) and tag a location.
+// A post or reply can be just a photo; the text is optional when something is attached.
+import { useEffect, useMemo, useState } from 'react'
 import { useMutations, useR2Files } from 'deepspace'
+import { ImagePlus, X } from 'lucide-react'
 import { BODY_LABELS } from '../../lib/space'
 import ProfileEditor from '../social/ProfileEditor'
 import UserAvatar from '../social/UserAvatar'
@@ -39,6 +41,12 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
   const [sending, setSending] = useState(false)
   const [expanded, setExpanded] = useState(!compact)
 
+  // Preview of the picked photo/video (a temporary local link, freed when the file changes).
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+  }, [previewUrl])
+
   if (!isSignedIn) return <SignInPrompt action={replyToId ? 'reply' : quoteOfId ? 'quote posts' : 'post'} />
   if (loading) return null
   if (!profile) return <ProfileEditor existing={null} />
@@ -58,13 +66,13 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault() // stop the page from reloading
-    if (!text.trim() || !ready || !profile) return
+    if ((!text.trim() && !file) || !ready || !profile) return
 
     setSending(true)
     setError('')
     try {
       const post: Post = {
-        text: text.trim(),
+        text: text.trim() || alt.trim() || 'Shared a photo', // posts always have text; a photo-only post gets a caption
         authorName: profile.username,
         ...(replyToId ? { replyToId } : {}),
         ...(quoteOfId ? { quoteOfId } : {}),
@@ -73,7 +81,7 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
       // 1. Upload the file first (if any), then save its key on the post.
       if (file) {
         const result = await upload(file, file.name)
-        if (!result.success || !result.key) throw new Error(result.error ?? 'Upload failed')
+        if (!result.success || !result.key) throw new Error(`the photo didn't upload (${result.error ?? 'no reason given'})`)
         post.mediaKey = result.key
         post.mediaType = file.type
         post.mediaAlt = alt.trim() || text.trim()
@@ -132,8 +140,9 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
       <>
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <label className="cursor-pointer rounded-full border border-border px-3 py-1 hover:bg-accent">
-          {file ? `Attached: ${file.name}` : 'Add photo or video'}
+        <label className="flex cursor-pointer items-center gap-1.5 border border-border px-3 py-1 font-bold hover:bg-accent focus-within:outline focus-within:outline-2 focus-within:outline-[var(--color-ring)]">
+          <ImagePlus className="h-4 w-4" aria-hidden />
+          {file ? 'Change photo or video' : 'Add photo or video'}
           <input type="file" accept="image/*,video/*" onChange={onPickFile} className="sr-only" />
         </label>
         {!isReply && (
@@ -143,6 +152,24 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
           </label>
         )}
       </div>
+
+      {file && previewUrl && (
+        <div className="relative inline-block">
+          {file.type.startsWith('video/') ? (
+            <video src={previewUrl} className="max-h-48 border border-border" muted aria-label="Video to attach" />
+          ) : (
+            <img src={previewUrl} alt="Photo to attach" className="max-h-48 border border-border object-contain" />
+          )}
+          <button
+            type="button"
+            onClick={() => setFile(null)}
+            aria-label="Remove the attachment"
+            className="absolute right-1 top-1 bg-background/90 p-1 hover:bg-accent"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+      )}
 
       {file && (
         <label className="block text-sm">
@@ -181,10 +208,10 @@ export default function PostComposer({ replyToId, quoteOfId, quotePreview, place
           )}
           <button
             type="submit"
-            disabled={busy || !ready || !text.trim()}
+            disabled={busy || !ready || (!text.trim() && !file)}
             className="rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground disabled:opacity-50"
           >
-            {busy ? 'Sending...' : isReply ? 'Reply' : quoteOfId ? 'Quote' : 'Post'}
+            {isUploading ? 'Uploading...' : busy ? 'Sending...' : isReply ? 'Reply' : quoteOfId ? 'Quote' : 'Post'}
           </button>
         </div>
       </div>

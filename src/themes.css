@@ -60,7 +60,7 @@
   --color-secondary: #20254a;
   --color-secondary-foreground: #eceaf6;
   --color-muted: #20254a;
-  --color-muted-foreground: #9b9dba;
+  --color-muted-foreground: #b6b8d6; /* bright enough to read in the pixel font */
   --color-accent: #262c57;
   --color-accent-foreground: #eceaf6;
   --color-destructive: #ff6b6b;
@@ -243,4 +243,12 @@ a.bg-primary:active {
 }
 .twinkle {
   animation: twinkle 2.4s steps(2) infinite;
+}
+
+/* Vitals: the empty 8-bit heart blinks on and off at danger (stops under Reduce motion via the rules above). */
+@keyframes heart-blink {
+  50% { opacity: 0.2; }
+}
+.heart-blink {
+  animation: heart-blink 1s steps(1) infinite;
 }

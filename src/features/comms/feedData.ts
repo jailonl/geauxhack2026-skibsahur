@@ -3,7 +3,8 @@
 import { createContext, useContext, useMemo } from 'react'
 import { useAuth, useMutations, useQuery } from 'deepspace'
 import type { Profiles } from '../social/profiles'
-import type { Body, Post, PostRecord } from './types'
+import type { Place } from '../../lib/space'
+import type { Post, PostRecord } from './types'
 
 export type Reaction = { targetId: string; kind: 'like' | 'repost'; userId?: string }
 export type ReactionRecord = { recordId: string; data: Reaction; createdBy: string; createdAt: string }
@@ -124,7 +125,7 @@ export function authorOf(post: PostRecord, profiles: Profiles) {
 
 /** Where a transmission came from: its location tag, else the author's home world. Used for the
  * origin strip on each card and for the feed's world tabs. */
-export function originOf(post: PostRecord, profiles: Profiles): Body | null {
+export function originOf(post: PostRecord, profiles: Profiles): Place | null {
   if (post.data.body) return post.data.body
   if (post.data.botKind) return null
   return profiles.byUserId.get(post.createdBy)?.homeBody ?? null
