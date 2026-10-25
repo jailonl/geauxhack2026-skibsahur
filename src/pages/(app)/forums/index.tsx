@@ -59,7 +59,7 @@ export default function ForumsPage() {
     <div className="space-y-5 px-1 py-2">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl leading-none">Colony forums</h1>
+          <h1 className="font-display text-2xl leading-none">Stellar forums</h1>
           <p className="mt-1 text-sm text-muted-foreground">Longer conversations, one board per world and topic. Open a section to see its boards.</p>
         </div>
         {isAdmin && <SeedButton />}

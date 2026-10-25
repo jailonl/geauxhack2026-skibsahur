@@ -228,3 +228,19 @@ a.bg-primary:active {
 .refresh-spin {
   animation: refresh-spin 0.6s steps(8) 1;
 }
+
+/* Blinking text cursor on the welcome screen ("Press Enter: Stellar_"). Stops under Reduce motion. */
+@keyframes blink {
+  50% { opacity: 0; }
+}
+.blink {
+  animation: blink 1s steps(1) infinite;
+}
+
+/* Twinkling stars on the welcome page (src/features/home/Starfield.tsx). Stops under Reduce motion. */
+@keyframes twinkle {
+  50% { opacity: 0.1; }
+}
+.twinkle {
+  animation: twinkle 2.4s steps(2) infinite;
+}
