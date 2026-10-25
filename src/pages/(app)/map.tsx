@@ -8,6 +8,7 @@ import { MAP_BODIES, isOnMap } from '../../features/map/poi-logic'
 import MapView, { TREK } from '../../features/map/MapView'
 import PoiForm from '../../features/map/PoiForm'
 import { useSearchParams } from 'react-router-dom'
+import { LANDMARKS } from '../../features/map/landmarks'
 
 
 const BODY_LABELS: Record<string, string> = {
@@ -86,6 +87,7 @@ export default function MapPage() {
         <MapView
           body={body}
           tint={findForum(body)?.accent}
+          landmarks={LANDMARKS.filter((l) => l.body === body)}
           pois={records}
           picked={picked}
           onPick={(lat, lng) => setPicked({ lat, lng })}
