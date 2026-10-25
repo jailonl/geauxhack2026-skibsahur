@@ -15,3 +15,10 @@ export function isAlreadyDiscovered(pois: PointOfInterest[], body: MapBody, lat:
     (p) => p.body === body && Math.abs(p.lat - lat) <= NEARBY && Math.abs(p.lng - lng) <= NEARBY,
   )
 }
+
+// "18.40°N, 77.60°E" instead of "18.4, 77.6", for the details card.
+export function formatCoords(lat: number, lng: number): string {
+  const ns = lat >= 0 ? 'N' : 'S'
+  const ew = lng >= 0 ? 'E' : 'W'
+  return `${Math.abs(lat).toFixed(2)}°${ns}, ${Math.abs(lng).toFixed(2)}°${ew}`
+}
