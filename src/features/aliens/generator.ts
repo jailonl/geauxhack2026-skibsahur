@@ -62,8 +62,8 @@ function numberFor(rule: string, random: () => number): string | null {
   return null
 }
 
-/** Replace every #rule# in the text with a random choice, up to 6 levels deep. */
-function expand(text: string, grammar: Grammar, random: () => number, depth = 0): string {
+/** Replace every #rule# in the text with a random choice, up to 6 levels deep. Also used by the colony chatter. */
+export function expand(text: string, grammar: Grammar, random: () => number, depth = 0): string {
   if (depth > 6) return text
   return text.replace(/#(\w+)#/g, (_, rule: string) => {
     const n = numberFor(rule, random)

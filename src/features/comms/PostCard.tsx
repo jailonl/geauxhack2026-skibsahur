@@ -10,7 +10,7 @@ import { speak, useSettings } from '../settings/settings'
 import UserAvatar from '../social/UserAvatar'
 import { useMyProfile, type Profiles } from '../social/profiles'
 import PostComposer from './PostComposer'
-import { authorOf, type FeedData, type PostStats } from './feedData'
+import { authorOf, originOf, type FeedData, type PostStats } from './feedData'
 import type { PostRecord } from './types'
 
 type Props = {
@@ -84,12 +84,6 @@ function Media({ mediaKey, mediaType, alt, compact }: { mediaKey: string; mediaT
   )
 }
 
-/** Where a transmission came from: its location tag, else the author's home world. */
-function originOf(post: PostRecord, profiles: Profiles): Body | null {
-  if (post.data.body) return post.data.body
-  if (post.data.botKind) return null
-  return profiles.byUserId.get(post.createdBy)?.homeBody ?? null
-}
 
 function PostCard(props: Props) {
   const {

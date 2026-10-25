@@ -1,9 +1,10 @@
-// "/forums" — every board, grouped into collapsible sections (home worlds, outer colonies, lounges) like a
+// "/forums" — every board that has threads, grouped into collapsible sections (home worlds, outer colonies, lounges) like a
 // Moodle course page, plus the top threads right now.
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAuthToken, useQuery, useUser } from 'deepspace'
-import { CATEGORY_LABELS, FORUMS, findForum, useVotes, type ForumCategory, type Thread } from '../../../features/forums/forums'
+import { getAuthToken, useUser } from 'deepspace'
+import { CATEGORY_LABELS, FORUMS, findForum, useVotes, type ForumCategory } from '../../../features/forums/forums'
+import { useForumActivity } from '../../../features/social/SocialProvider'
 
 const CATEGORIES: ForumCategory[] = ['worlds', 'colonies', 'lounges']
 
@@ -35,18 +36,20 @@ function SeedButton() {
 }
 
 export default function ForumsPage() {
-  const { records } = useQuery<Thread>('threads', { orderBy: 'createdAt', orderDir: 'desc', limit: 2000 })
+  const { threads: records } = useForumActivity() // shared with the rest of the app; no extra download
   const votes = useVotes()
   const { user } = useUser()
   const isAdmin = user?.role === 'admin' || user?.isAdmin === true
 
   // One pass (records are newest first): thread count and newest thread per forum.
   const counts = new Map<string, number>()
-  const newest = new Map<string, Thread & { id: string; at: string }>()
+  const newest = new Map<string, { title: string; id: string; at: string }>()
   for (const r of records) {
     counts.set(r.data.forum, (counts.get(r.data.forum) ?? 0) + 1)
-    if (!newest.has(r.data.forum)) newest.set(r.data.forum, { ...r.data, id: r.recordId, at: r.createdAt })
+    if (!newest.has(r.data.forum)) newest.set(r.data.forum, { title: r.data.title, id: r.recordId, at: r.createdAt })
   }
+
+  const active = FORUMS.filter((f) => counts.has(f.slug))
 
   // Trending: highest score among threads from the last 3 days.
   const cutoff = Date.now() - 3 * 86_400_000
@@ -85,8 +88,15 @@ export default function ForumsPage() {
         </details>
       )}
 
-      {/* One collapsible section per category, like the topic sections of a Moodle course page. */}
-      {CATEGORIES.map((c) => (
+      {active.length === 0 && (
+        <p className="border border-dashed border-border py-10 text-center text-muted-foreground">
+          No discussions yet.{isAdmin ? ' Use "Seed the forums" to add starter threads.' : ' Check back soon.'}
+        </p>
+      )}
+
+      {/* One collapsible section per category, like the topic sections of a Moodle course page.
+          Boards with no threads yet are hidden, and so is a section with no boards left. */}
+      {CATEGORIES.filter((c) => active.some((f) => f.category === c)).map((c) => (
         <details key={c} open className="border border-border bg-card">
           <summary className="cursor-pointer bg-secondary px-3 py-2">
             <span className="font-display text-xs uppercase tracking-wider text-primary">{CATEGORY_LABELS[c].title}</span>
@@ -101,7 +111,7 @@ export default function ForumsPage() {
               </tr>
             </thead>
             <tbody>
-              {FORUMS.filter((f) => f.category === c).map((f) => {
+              {active.filter((f) => f.category === c).map((f) => {
                 const n = counts.get(f.slug) ?? 0
                 const latest = newest.get(f.slug)
                 return (

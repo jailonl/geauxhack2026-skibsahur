@@ -2,6 +2,8 @@ import type { ActionHandler } from 'deepspace/worker'
 import { resolveAppRole } from 'deepspace/worker'
 import type { Env } from '../../worker'
 import { generateBotPost } from '../features/comms/ai'
+import { FORUMS } from '../features/forums/forums'
+import { addPoiThreads, type Poi } from '../features/forums/poiThreads'
 import { SEED_THREADS } from '../features/forums/seed'
 
 export const actions: Record<string, ActionHandler<Env>> = {
@@ -14,7 +16,8 @@ export const actions: Record<string, ActionHandler<Env>> = {
   },
 
   // POST /api/actions/seedForums — admin-only: fills every forum with starter conversations from the bot
-  // colonists (fixed text in src/features/forums/seed.ts, no AI credits). Skips threads that already exist.
+  // colonists (fixed text in src/features/forums/seed.ts, no AI credits), plus a thread for each point of
+  // interest on the map. Skips threads that already exist.
   seedForums: async ({ tools, userId, env }) => {
     const role = await resolveAppRole(env, userId)
     if (role !== 'admin') return { success: false, error: 'Only admins can seed the forums.' }
@@ -36,6 +39,21 @@ export const actions: Record<string, ActionHandler<Env>> = {
         if (ok.success) comments++
       }
     }
+    // Plus one thread per point of interest on the map (src/features/forums/poiThreads.ts).
+    const fromPois = await addPoiThreads(
+      {
+        pois: async () => ((await tools.query<Poi>('pois', { limit: 500 })).data?.records ?? []).map((r) => r.data),
+        threadTitles: async () => [...titles],
+        create: async (collection, data) => {
+          const made = await tools.create(collection, data)
+          return made.success ? made.data?.recordId ?? null : null
+        },
+      },
+      FORUMS.map((f) => f.slug),
+      100,
+    )
+    threads += fromPois.threads
+    comments += fromPois.comments
     return { success: true, data: { threads, comments } }
   },
 

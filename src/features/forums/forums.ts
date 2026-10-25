@@ -54,7 +54,7 @@ export type Vote = { targetId: string; value: number; userId?: string }
 /** All votes, summed per thread/comment, plus my own vote on each (so clicking again undoes it). */
 export function useVotes() {
   const { userId } = useAuth()
-  const { records } = useQuery<Vote>('votes', { limit: 5000 })
+  const { records } = useQuery<Vote>('votes', { limit: 2000 })
   const { ready, create, put, remove } = useMutations<Vote>('votes')
 
   const tally = useMemo(() => {

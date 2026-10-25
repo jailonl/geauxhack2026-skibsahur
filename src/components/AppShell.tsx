@@ -1,14 +1,13 @@
 // Page layout in the style of a Moodle course page:
 // - left drawer (wide screens): navigation and the busiest forums
 // - center: breadcrumbs, then the page
-// - right column (extra-wide screens): info blocks (colony pulse, signal times, colonists)
+// - right column (extra-wide screens): info blocks (signal times, colonists)
 // On phones the drawer is replaced by the bottom tab bar (Navigation.tsx), and on the feed and forums
 // pages the right-hand blocks move below the page.
 import { useSyncExternalStore, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useUser } from 'deepspace'
+import { useAuth, useUser } from 'deepspace'
 import Block from './Block'
-import ColonyPulse from '../features/home/ColonyPulse'
 import SignalTimes from '../features/home/SignalTimes'
 import { FORUMS, findForum } from '../features/forums/forums'
 import { useNotifications } from '../features/notifications/notifications'
@@ -37,14 +36,18 @@ function isActive(pathname: string, to: string) {
 function LeftDrawer({ pathname }: { pathname: string }) {
   const { unread } = useNotifications()
   const { user } = useUser()
+  const { isSignedIn } = useAuth()
   const { threads } = useForumActivity()
   const isAdmin = user?.role === 'admin' || user?.isAdmin === true
-  const links = isAdmin ? [...LINKS, { to: '/settings', label: 'Admin' }] : LINKS
+  // Guests don't get notifications; only admins see the Admin page.
+  const links = [...LINKS.filter((l) => isSignedIn || l.to !== '/notifications'), ...(isAdmin ? [{ to: '/settings', label: 'Admin' }] : [])]
 
   // Busiest forums by recent threads (shared data; no extra query).
   const counts = new Map<string, number>()
   for (const t of threads) counts.set(t.data.forum, (counts.get(t.data.forum) ?? 0) + 1)
-  const busiest = [...FORUMS].sort((a, b) => (counts.get(b.slug) ?? 0) - (counts.get(a.slug) ?? 0)).slice(0, 6)
+  const busiest = FORUMS.filter((f) => counts.has(f.slug))
+    .sort((a, b) => (counts.get(b.slug) ?? 0) - (counts.get(a.slug) ?? 0))
+    .slice(0, 6)
 
   return (
     <aside aria-label="Navigation drawer" className="max-h-[calc(100vh-6rem)] space-y-5 overflow-y-auto p-1">
@@ -69,7 +72,7 @@ function LeftDrawer({ pathname }: { pathname: string }) {
           })}
         </ul>
       </Block>
-      <Block id="drawer-forums" title="Busy forums">
+      {busiest.length > 0 && <Block id="drawer-forums" title="Busy forums">
         <ul className="-m-1 space-y-0.5">
           {busiest.map((f) => (
             <li key={f.slug}>
@@ -82,7 +85,7 @@ function LeftDrawer({ pathname }: { pathname: string }) {
           ))}
         </ul>
         <Link to="/forums" className="font-signal mt-2 inline-block text-primary hover:underline">[ All forums ]</Link>
-      </Block>
+      </Block>}
     </aside>
   )
 }
@@ -117,7 +120,6 @@ function RightBlocks() {
   const { profile } = useMyProfile()
   return (
     <>
-      <ColonyPulse />
       <SignalTimes home={profile?.homeBody ?? 'earth'} />
       <Colonists />
     </>
