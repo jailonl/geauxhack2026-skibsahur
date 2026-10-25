@@ -4,12 +4,11 @@ import { useState } from 'react'
 import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
 import type { MapBody, PointOfInterest } from '../../features/map/types'
 import { findForum } from '../../features/forums/forums'
-import { MAP_BODIES, isOnMap } from '../../features/map/poi-logic'
-import MapView, { TREK } from '../../features/map/MapView'
+import { MAP_BODIES, formatCoords, isOnMap } from '../../features/map/poi-logic'
+import MapView, { DOT_COLORS, TREK, landmarkId } from '../../features/map/MapView'
 import PoiForm from '../../features/map/PoiForm'
 import { useSearchParams } from 'react-router-dom'
 import { LANDMARKS } from '../../features/map/landmarks'
-
 
 const BODY_LABELS: Record<string, string> = {
   moon: 'Moon',
@@ -32,6 +31,7 @@ export default function MapPage() {
   const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(
     fromLink ? { lat: linkLat, lng: linkLng } : null,
   )
+  const [selectedId, setSelectedId] = useState<string | null>(null) // POI or landmark whose card is open
 
   // Live: new POIs from anyone show up without a refresh.
   const { records, status, error } = useQuery<PointOfInterest>('pois', { where: { body } })
@@ -54,6 +54,69 @@ export default function MapPage() {
   function onTab(next: MapBody) {
     setBody(next)
     setPicked(null)
+    setSelectedId(null)
+  }
+
+  const landmarks = LANDMARKS.filter((l) => l.body === body)
+
+  // Card content for whatever marker is selected: a colonist POI or a built-in landmark.
+  function renderDetails() {
+    const poi = records.find((r) => r.recordId === selectedId)
+    const landmark = landmarks.find((l) => landmarkId(l) === selectedId)
+    if (!poi && !landmark) return null
+
+    const close = (
+      <button
+        type="button"
+        onClick={() => setSelectedId(null)}
+        aria-label="Close details"
+        className="rounded px-1 text-muted-foreground hover:text-foreground"
+      >
+        ✕
+      </button>
+    )
+
+    if (landmark) {
+      return (
+        <div role="dialog" aria-label={landmark.name} className="rounded-xl border bg-card p-3 text-sm shadow-lg">
+          <div className="flex items-start justify-between gap-2">
+            <strong className="text-base">{landmark.name}</strong>
+            {close}
+          </div>
+          <p className="text-muted-foreground">Known landmark · {formatCoords(landmark.lat, landmark.lng)}</p>
+          <p className="mt-1">{landmark.note}</p>
+        </div>
+      )
+    }
+
+    const { recordId, createdBy, data: p } = poi!
+    const canDelete = ready && (isAdmin || (userId != null && createdBy === userId))
+    return (
+      <div role="dialog" aria-label={p.name} className="rounded-xl border bg-card p-3 text-sm shadow-lg">
+        <div className="flex items-start justify-between gap-2">
+          <strong className="text-base">{p.name}</strong>
+          {close}
+        </div>
+        <p className="flex items-center gap-1.5 capitalize">
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ background: DOT_COLORS[p.type] }} />
+          {p.type} · {p.safe ? 'Safe' : 'Not safe'}
+        </p>
+        <p className="text-muted-foreground">
+          {formatCoords(p.lat, p.lng)} · {BODY_LABELS[p.body] ?? p.body}
+        </p>
+        {p.description && <p className="mt-1">{p.description}</p>}
+        <p className="mt-1 text-xs text-muted-foreground">{p.discovered ? 'Near an earlier find' : 'New discovery'}</p>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(recordId, p.name)}
+            className="mt-2 text-sm text-destructive underline"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -87,10 +150,13 @@ export default function MapPage() {
         <MapView
           body={body}
           tint={findForum(body)?.accent}
-          landmarks={LANDMARKS.filter((l) => l.body === body)}
+          landmarks={landmarks}
           pois={records}
           picked={picked}
           onPick={(lat, lng) => setPicked({ lat, lng })}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          details={renderDetails()}
         />
         {TREK[body] && (
           <p className="mt-1 text-xs text-muted-foreground">
