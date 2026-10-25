@@ -1,6 +1,8 @@
 // The map: a lat/lng grid with one dot per POI. Clicking the map picks a spot (like typing lat,lon in my Java).
 // x = lng + 180 (0..360), y = 90 - lat (0..180), so the top-left corner is (90, -180).
 import type { MapBody, PoiType, PointOfInterest } from './types'
+import type { Landmark } from './landmarks'
+
 
 const DOT_COLORS: Record<PoiType, string> = {
   colony: '#3b82f6',
@@ -25,12 +27,13 @@ const TILES = [0, 1].flatMap((row) => [0, 1, 2, 3].map((col) => ({ row, col })))
 type Props = {
   body: MapBody
   tint?: string // the tab's color, laid lightly over the terrain
+  landmarks?: Landmark[]
   pois: { recordId: string; data: PointOfInterest }[]
   picked: { lat: number; lng: number } | null
   onPick: (lat: number, lng: number) => void
 }
 
-export default function MapView({ body, tint, pois, picked, onPick }: Props) {
+export default function MapView({ body, tint, landmarks = [], pois, picked, onPick }: Props) {
   const trek = TREK[body]
 
   function onClick(e: React.MouseEvent<SVGSVGElement>) {
@@ -75,6 +78,29 @@ export default function MapView({ body, tint, pois, picked, onPick }: Props) {
       {[30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((x) => (
         <line key={`x${x}`} x1={x} y1={0} x2={x} y2={180} stroke="white" strokeOpacity={trek ? 0.15 : 0.1} strokeWidth={0.5} />
       ))}
+
+      {/* built-in landmarks: small gray diamonds with a label, under the colonist POIs */}
+      {landmarks.map((l) => {
+        const x = l.lng + 180
+        const y = 90 - l.lat
+        return (
+          <g key={l.name}>
+            <polygon points={`${x},${y - 3} ${x + 3},${y} ${x},${y + 3} ${x - 3},${y}`} fill="#d4d4d8" stroke="black" strokeWidth={0.5} />
+            <text
+              x={x > 300 ? x - 4 : x + 4}
+              y={y > 170 ? y - 4 : y + 1.5}
+              textAnchor={x > 300 ? 'end' : 'start'}
+              fontSize={4}
+              fill="white"
+              stroke="black"
+              strokeWidth={0.2}
+            >
+              {l.name}
+            </text>
+            <title>{`${l.name}: ${l.note}`}</title>
+          </g>
+        )
+      })}
 
       {pois.map(({ recordId, data: p }) => (
         <circle
