@@ -50,7 +50,7 @@ Rule 1 limit: 2 external APIs. DeepSpace is our backend-as-a-service and does no
 | API | Used for |
 | --- | --- |
 | DeepSpace AI (Claude Haiku via DeepSpace) | Writing colony bot posts and AI operator DM replies at runtime |
-| _API #2 (e.g. NASA DONKI)_ | _what it's used for_ |
+| NASA Solar System Treks (map tiles) | Real terrain behind the POI map for the Moon, Mars, Europa, Titan, Ceres, and Ganymede |
 
 AI is used only for text. No AI-generated images or videos appear anywhere in the app (Rule 3). If an AI call fails, bots fall back to scripted lines in `src/features/comms/bots.ts`.
 
@@ -60,7 +60,7 @@ AI is used only for text. No AI-generated images or videos appear anywhere in th
 
 ### AI-generated and AI-assisted code
 
-No AI was used to generate any image or video assets. All images in the app are created by our team. No external code sources were given to AI to reference.
+No AI was used to generate any image or video assets. All images in the app are created by our team, except the planet terrain on the POI map, which is real NASA spacecraft imagery (credited under Extras). No external code sources were given to AI to reference.
 
 
 **Tool:** Claude (Anthropic), through the claude.ai chat app and Claude Code.
@@ -111,7 +111,7 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/map/types.ts` | Converted the same fields from my Java class into a TypeScript type |
 | `src/features/map/poi-logic.ts` | Ported my Java rules (discovered check, valid types, off-map check) to TypeScript |
 | `src/features/map/PoiForm.tsx` | Generated the React form from my Java `PoiForm` flow |
-| `src/features/map/MapView.tsx` | Generated the clickable map that plots POIs by lat/lng |
+| `src/features/map/MapView.tsx` | Generated the clickable map that plots POIs by lat/lng, and the NASA terrain tiles with a tint in each tab's color |
 | `src/pages/(app)/map.tsx` | Generated the map page with planet tabs, the form, the POI list, and remove for owners and admins |
 | `src/features/map/types.ts`, `poi-logic.ts`, `PoiForm.tsx`, `map.tsx`, `src/schemas/poi-schema.ts` (update) | Added Europa, Titan, Ceres, and Ganymede as map tabs (map-only list), with tab colors taken from the forums |
 | `src/nav.ts` | Added the Map link |
@@ -146,5 +146,7 @@ Photo and video uploads only work after the app has been deployed once (`npx dee
 **Science behind the light-delay:** Earth and Mars positions use circular-orbit approximations from their mean longitudes at J2000 (within about 10% of the true distance). One-way delay = distance ÷ speed of light. Earth–Moon delay uses the average distance of 384,400 km.
 
 **Facts the bots use:** Mars sol length (24 h 39 min 35 s), Curiosity's measured surface radiation (~0.67 mSv/day), ISS water recovery (~98%).
+
+**POI map terrain:** NASA Solar System Treks (trek.nasa.gov). Moon: LRO WAC mosaic (NASA/GSFC/Arizona State University). Mars: Viking MDIM 2.1 (NASA/JPL/USGS). Europa and Ganymede: Voyager and Galileo SSI mosaics (NASA/JPL/USGS). Titan: Cassini ISS mosaic (NASA/JPL/Space Science Institute). Ceres: Dawn Framing Camera mosaic (NASA/JPL/DLR). NASA imagery is public domain.
 
 **Known limitations:** local dev keeps its own data, so use the deployed link to see shared posts; photo/video uploads need one deploy before they work locally.
