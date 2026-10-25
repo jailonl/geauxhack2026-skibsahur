@@ -1,23 +1,27 @@
-// "/vitals" page: your own health and supply readings, with warnings at real safety limits.
+// "/vitals" page: your own health readings plus your colony's radiation and supplies, with warnings
+// at safety limits for the world you live on. On Earth, the Moon, and the station you're human (real
+// medical limits); everywhere else you're that world's alien (its own limits, see aliens.ts).
+// Radiation and supplies are the colony's own live numbers (colony.ts), the same for everyone there.
 // It's under (protected), so you have to be signed in, and the schema only lets you read your own
-// readings (see src/schemas/vitals-schema.ts). Live: a reading saved on another device shows up here.
-// The form, history, and limits open from buttons; a saved reading's result pops up (ReadingResult.tsx).
-// Readings can be shared by DM (ShareDialog.tsx), and the Private / Public switch puts your latest
-// reading on your profile (VitalsPrivacy.tsx).
-import { useState } from 'react'
+// readings (see src/schemas/vitals-schema.ts). The form, history, and limits open from buttons; a saved
+// reading's survival rating pops up (ReadingResult.tsx). Readings can be shared by DM (ShareDialog.tsx),
+// and the Private / Public switch puts your latest reading on your profile (VitalsPrivacy.tsx).
+import { useEffect, useState } from 'react'
 import { useMutations } from 'deepspace'
 import Block from '../../../components/Block'
 import { useMyProfile } from '../../../features/social/profiles'
+import { alienFor, withArticle } from '../../../features/vitals/aliens'
+import { CAREER_LIMIT_MSV, PLACE_INFO, colonyNow, dayNumber, missionDoseFromRecords, radiationOnDay, suppliesOn } from '../../../features/vitals/colony'
 import VitalCard, { LevelBadge, timeAgo } from '../../../features/vitals/VitalCard'
 import ReadingResult from '../../../features/vitals/ReadingResult'
 import ShareDialog, { type ShareTarget } from '../../../features/vitals/ShareDialog'
+import SurvivalRating from '../../../features/vitals/SurvivalRating'
 import { useMyVitals } from '../../../features/vitals/useVitalsSharing'
 import VitalsPrivacy from '../../../features/vitals/VitalsPrivacy'
 import VitalsForm from '../../../features/vitals/VitalsForm'
 import {
-  BACKGROUND_DOSE, CAREER_LIMIT_MSV, DEEP_SPACE_DOSE, DOSE_MEASURED, LIMIT_NOTES,
-  checkBloodPressure, checkHeartRate, checkMissionDose, checkRadiationDay, checkReading, checkSpo2,
-  checkSupply, checkTemperature, history, latest, missionDose, worst,
+  checkMissionDose, checkRadiationDay, checkReading, checkSupply, fieldFor, formatChance, history, limitNotes, survivalRating, worst,
+  type ReadingRow,
 } from '../../../features/vitals/limits'
 import type { Check, VitalKey, Vitals } from '../../../features/vitals/types'
 import { BODY_LABELS, PLANET_COLORS } from '../../../lib/space'
@@ -31,9 +35,26 @@ const PANELS: { id: Panel; label: string }[] = [
   { id: 'limits', label: 'Safety limits' },
 ]
 
+/** Re-renders every minute so the colony numbers (radiation, supplies) stay current. */
+function useNow(everyMs = 60_000): number {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), everyMs)
+    return () => window.clearInterval(id)
+  }, [everyMs])
+  return now
+}
+
+type CardData = { value: string | null; check: Check | null; at: string | null; trend: number[] }
+const EMPTY_CARD: CardData = { value: null, check: null, at: null, trend: [] }
+
 export default function VitalsPage() {
   const { profile } = useMyProfile()
   const home = profile?.homeBody ?? 'earth'
+  const alien = alienFor(home)
+  const now = useNow()
+  const colony = colonyNow(home, now)
+  const today = dayNumber(now)
   const [panel, setPanel] = useState<Panel | null>(null) // which tool is open (none at first)
   const [saved, setSaved] = useState<ShareTarget | null>(null) // the reading shown in the result pop-up
   const [sharing, setSharing] = useState<ShareTarget | null>(null) // the reading in the Share pop-up
@@ -41,44 +62,68 @@ export default function VitalsPage() {
   const { records, status, error } = useMyVitals() // your own readings, newest first
   const { ready, remove } = useMutations<Vitals>('vitals')
 
-  // One helper per simple card: latest value + its check + trend.
-  function card(key: VitalKey, checkFn: (v: number) => Check, places = 0) {
-    const last = latest(records, key)
-    return {
-      value: last ? fmt(last.value, places) : null,
-      check: last ? checkFn(last.value) : null,
-      at: last?.at ?? null,
-      trend: history(records, key),
-    }
+  // Health cards use readings from the world you live on now, since the limits are different elsewhere.
+  const here = records.filter((r) => (r.data.body ?? 'earth') === home)
+  const checkOne = (reading: Vitals) => checkReading({ body: home, ...reading })[0]?.check ?? null
+
+  function card(key: VitalKey, places = 0): CardData {
+    const r = here.find((x) => x.data[key] != null) // newest first
+    if (!r) return EMPTY_CARD
+    const v = r.data[key] as number
+    return { value: fmt(v, places), check: checkOne({ [key]: v }), at: r.createdAt, trend: history(here, key) }
   }
 
-  const heart = card('heartRate', checkHeartRate)
-  const spo2 = card('spo2', checkSpo2)
-  const temp = card('temperature', checkTemperature, 1)
-  const radDay = card('radiation', checkRadiationDay, 2)
-  const oxygen = card('oxygenDays', checkSupply)
-  const water = card('waterDays', checkSupply)
-  const food = card('foodDays', checkSupply)
-
-  // Blood pressure needs both numbers from the same reading.
-  const bpRecord = records.find((r) => r.data.systolic != null && r.data.diastolic != null) // newest first
-  const bp = bpRecord
+  const slowHeart = alien != null && alien.heartRate.cautionHigh < 10
+  const heart = card('heartRate', slowHeart ? 1 : 0)
+  const spo2 = card('spo2')
+  const temp = card('temperature', 1)
+  const bpRecord = here.find((r) => r.data.systolic != null && r.data.diastolic != null)
+  const bp: CardData = bpRecord
     ? {
         value: `${bpRecord.data.systolic}/${bpRecord.data.diastolic}`,
-        check: checkBloodPressure(bpRecord.data.systolic!, bpRecord.data.diastolic!),
+        check: checkOne({ systolic: bpRecord.data.systolic, diastolic: bpRecord.data.diastolic }),
         at: bpRecord.createdAt,
-        trend: history(records, 'systolic'),
+        trend: history(here, 'systolic'),
       }
-    : { value: null, check: null, at: null, trend: [] }
+    : EMPTY_CARD
 
-  const totalDose = missionDose(records)
-  const dose = { value: records.some((r) => r.data.radiation != null) ? fmt(totalDose, 1) : null, check: checkMissionDose(totalDose) }
+  // Colony numbers: live, the same for everyone on this world. Trends are the last 12 days.
+  const pastDays = Array.from({ length: 12 }, (_, i) => today - 11 + i)
+  const radDay: CardData = {
+    value: fmt(colony.mSv, colony.mSv < 0.1 ? 4 : 2),
+    check: checkRadiationDay(colony.mSv, home),
+    at: null,
+    trend: pastDays.map((d) => radiationOnDay(home, d).mSv),
+  }
+  const supply = (key: 'oxygenDays' | 'waterDays' | 'foodDays'): CardData => ({
+    value: String(colony[key]),
+    check: checkSupply(colony[key], home),
+    at: null,
+    trend: pastDays.map((d) => suppliesOn(home, d)[key]),
+  })
+  const oxygen = supply('oxygenDays')
+  const water = supply('waterDays')
+  const food = supply('foodDays')
 
-  const allChecks = [heart, spo2, bp, temp, radDay, dose, oxygen, water, food]
-    .map((c) => (c.value == null ? null : c.check))
-    .filter((c): c is Check => c != null)
-  const overall = worst(allChecks.map((c) => c.level))
-  const flagged = allChecks.filter((c) => c.level !== 'ok').length
+  const totalDose = missionDoseFromRecords(records, home, now)
+  const dose: CardData = totalDose == null
+    ? EMPTY_CARD
+    : { value: fmt(totalDose, 1), check: checkMissionDose(totalDose, home), at: null, trend: [] }
+
+  // Everything on the page, for the overall survival rating.
+  const gasLabel = fieldFor('spo2', home).label
+  const pressureLabel = alien ? 'Body pressure' : 'Blood pressure'
+  const cards: [string, string, CardData][] = [
+    ['Heart rate', 'bpm', heart], [gasLabel, '%', spo2], [pressureLabel, 'mmHg', bp], ['Temperature', '°C', temp],
+    ['Radiation today', 'mSv', radDay], ['Mission radiation', 'mSv', dose],
+    ['Oxygen', 'days', oxygen], ['Water', 'days', water], ['Food', 'days', food],
+  ]
+  const rows: ReadingRow[] = cards
+    .filter(([, , c]) => c.value != null && c.check != null)
+    .map(([label, unit, c]) => ({ label, value: unit === '%' ? `${c.value}%` : `${c.value} ${unit}`, check: c.check! }))
+  const survival = survivalRating(rows)
+  const info = PLACE_INFO[home]
+  const career = alien ? alien.careerDose : CAREER_LIMIT_MSV
 
   async function onDelete(recordId: string) {
     if (!window.confirm('Delete this reading?')) return
@@ -94,63 +139,60 @@ export default function VitalsPage() {
       <header>
         <h1 className="font-display text-2xl text-primary">Vitals</h1>
         <p className="text-sm text-muted-foreground">
-          Readings from <span style={{ color: PLANET_COLORS[home] }}>{BODY_LABELS[home]}</span>.
+          {alien ? `You're ${withArticle(alien.name)} on ` : "You're human on "}
+          <span style={{ color: PLANET_COLORS[home] }}>{BODY_LABELS[home]}</span>
+          {alien ? ` (${alien.about.toLowerCase()}).` : '.'}
         </p>
         <VitalsPrivacy className="mt-2" />
       </header>
 
       {status === 'error' && <p role="alert" className="text-destructive">Could not load your vitals: {error}</p>}
 
-      {/* Overall status. role="alert" only when something is dangerous, so screen readers hear it right away. */}
-      {records.length > 0 && (
-        <div
-          role={overall === 'danger' ? 'alert' : 'status'}
-          className="flex flex-wrap items-center gap-3 border bg-card p-3"
-        >
-          <LevelBadge level={overall} size={3} showLabel />
-          <span>
-            {overall === 'ok'
-              ? 'All readings are in the normal range.'
-              : `${flagged} reading${flagged === 1 ? '' : 's'} need${flagged === 1 ? 's' : ''} attention.`}
-          </span>
-        </div>
-      )}
+      {/* Overall survival rating for everything on the page. */}
+      <div role={worst(rows.map((r) => r.check.level)) === 'danger' ? 'alert' : undefined} className="border bg-card p-4">
+        <SurvivalRating survival={survival} />
+      </div>
 
       <section aria-labelledby="health-h" className="space-y-2">
-        <h2 id="health-h" className="font-display text-xs uppercase tracking-wider text-muted-foreground">Health</h2>
+        <h2 id="health-h" className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+          Health{alien ? ` · ${alien.name} limits` : ''}
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <VitalCard label="Heart rate" unit="bpm" {...heart} />
-          <VitalCard label="Blood oxygen" unit="%" {...spo2} />
-          <VitalCard label="Blood pressure" unit="mmHg" {...bp} />
+          <VitalCard label={gasLabel} unit="%" {...spo2} />
+          <VitalCard label={pressureLabel} unit="mmHg" {...bp} />
           <VitalCard label="Temperature" unit="°C" {...temp} />
         </div>
       </section>
 
       <section aria-labelledby="exposure-h" className="space-y-2">
-        <h2 id="exposure-h" className="font-display text-xs uppercase tracking-wider text-muted-foreground">Radiation</h2>
+        <h2 id="exposure-h" className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+          Radiation · {BODY_LABELS[home]} colony
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <VitalCard
             label="Dose today"
             unit="mSv"
             {...radDay}
-            hint={
-              DOSE_MEASURED.has(home)
-                ? `${BODY_LABELS[home]} background: about ${BACKGROUND_DOSE[home]} mSv/day`
-                : `No surface data for ${BODY_LABELS[home]}; deep space is about ${DEEP_SPACE_DOSE} mSv/day`
-            }
+            hint={colony.storm ? 'Storm today! Stay near the shelter.' : `Normal here: ~${info.dose} mSv/day (${info.doseNote})`}
           />
           <VitalCard
             label="Mission total"
             unit="mSv"
-            value={dose.value}
-            check={dose.value == null ? null : dose.check}
-            hint={`NASA career limit: ${CAREER_LIMIT_MSV} mSv`}
+            {...dose}
+            hint={`Since your first reading · ${alien ? `${alien.name} lifetime limit` : 'NASA career limit'}: ${career} mSv`}
           />
         </div>
       </section>
 
       <section aria-labelledby="supplies-h" className="space-y-2">
-        <h2 id="supplies-h" className="font-display text-xs uppercase tracking-wider text-muted-foreground">Supplies</h2>
+        <h2 id="supplies-h" className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+          Supplies · {BODY_LABELS[home]} colony
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          {info.trip == null ? `Next harvest in ${colony.nextArrival} days` : `Next cargo in ${colony.nextArrival} days`} ({info.tripNote}).
+          {colony.fault && <strong className="ml-1 text-foreground">{colony.fault} this week.</strong>}
+        </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <VitalCard label="Oxygen" unit="days" {...oxygen} />
           <VitalCard label="Water" unit="days" {...water} />
@@ -190,11 +232,6 @@ export default function VitalsPage() {
           <Block id="vitals-log" title="Log a reading">
             <VitalsForm
               home={home}
-              previous={{
-                oxygenDays: latest(records, 'oxygenDays')?.value,
-                waterDays: latest(records, 'waterDays')?.value,
-                foodDays: latest(records, 'foodDays')?.value,
-              }}
               onSaved={(reading) => {
                 setPanel(null) // close the form; the result pops up instead
                 setSaved({ reading, takenAt: Date.now() })
@@ -218,24 +255,26 @@ export default function VitalsPage() {
                     <tr>
                       <th scope="col" className="p-1.5 font-normal">When</th>
                       <th scope="col" className="p-1.5 font-normal">HR</th>
-                      <th scope="col" className="p-1.5 font-normal">SpO2</th>
-                      <th scope="col" className="p-1.5 font-normal">BP</th>
+                      <th scope="col" className="p-1.5 font-normal">Gas %</th>
+                      <th scope="col" className="p-1.5 font-normal">Pressure</th>
                       <th scope="col" className="p-1.5 font-normal">Temp</th>
                       <th scope="col" className="p-1.5 font-normal">Rad</th>
                       <th scope="col" className="p-1.5 font-normal">O2 / H2O / Food</th>
-                      <th scope="col" className="p-1.5 font-normal">Status</th>
+                      <th scope="col" className="p-1.5 font-normal">Survival</th>
                       <th scope="col" className="p-1.5 font-normal"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody className="font-signal tabular-nums">
                     {records.slice(0, 20).map((r) => {
                       const v = r.data
-                      const level = worst(checkReading(v).map((c) => c.check.level))
+                      const rating = survivalRating(checkReading(v))
+                      const level = worst(rating.steps.map((x) => x.level))
                       const dash = (n: number | undefined, places = 0) => (n == null ? '–' : fmt(n, places))
                       return (
                         <tr key={r.recordId} className="border-t border-border">
                           <td className="p-1.5" title={new Date(r.createdAt).toLocaleString()}>
                             {timeAgo(r.createdAt)}
+                            {v.body && v.body !== home && <span className="ml-1 text-muted-foreground">· {BODY_LABELS[v.body]}</span>}
                             {v.source === 'sensor' && <span className="ml-1 text-muted-foreground">· sensor</span>}
                           </td>
                           <td className="p-1.5">{dash(v.heartRate)}</td>
@@ -244,7 +283,11 @@ export default function VitalsPage() {
                           <td className="p-1.5">{dash(v.temperature, 1)}</td>
                           <td className="p-1.5">{dash(v.radiation, 2)}</td>
                           <td className="p-1.5">{dash(v.oxygenDays)} / {dash(v.waterDays)} / {dash(v.foodDays)}</td>
-                          <td className="p-1.5"><LevelBadge level={level} /></td>
+                          <td className="p-1.5">
+                            <span className="inline-flex items-center gap-1.5">
+                              <LevelBadge level={level} /> {formatChance(rating.score)}
+                            </span>
+                          </td>
                           <td className="whitespace-nowrap p-1.5 text-right">
                             <button
                               type="button"
@@ -287,7 +330,12 @@ export default function VitalsPage() {
 
       {panel === 'limits' && (
         <div id="panel-limits">
-          <Block id="vitals-limits" title="Safety limits">
+          <Block id="vitals-limits" title={`Safety limits · ${alien ? `${alien.name} on ` : 'Humans on '}${BODY_LABELS[home]}`}>
+            {alien && (
+              <p className="mb-2 text-sm text-muted-foreground">
+                {alien.name} limits, with radiation and supplies for the {BODY_LABELS[home]} colony.
+              </p>
+            )}
             <div className="-m-1 overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead className="text-muted-foreground">
@@ -300,7 +348,7 @@ export default function VitalsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {LIMIT_NOTES.map((n) => (
+                  {limitNotes(home).map((n) => (
                     <tr key={n.name} className="border-t border-border">
                       <th scope="row" className="p-1.5 font-normal">{n.name}</th>
                       <td className="p-1.5">{n.normal}</td>
@@ -312,7 +360,6 @@ export default function VitalsPage() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">For a hackathon demo, not medical advice.</p>
           </Block>
         </div>
       )}

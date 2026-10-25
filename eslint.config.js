@@ -23,9 +23,13 @@ export default [
   // otherwise hard-fail the lint with "Parsing error: Invalid character".
   // `.deepspace/**` holds Playwright artifacts (test-results, playwright-report)
   // that the test runner rotates while a lint may be scanning them.
-  { ignores: ['dist/**', 'node_modules/**', '.wrangler/**', '.vite/**', '.deepspace/**', 'src/router.ts', '**/._*'] },
+  // `**/src/router.ts` (not just `src/router.ts`) so the ignore still matches when the dev-server checker
+  // hands ESLint a full Windows path.
+  { ignores: ['dist/**', 'node_modules/**', '.wrangler/**', '.vite/**', '.deepspace/**', 'src/router.ts', '**/src/router.ts', '**/._*'] },
   {
     files: ['**/*.{ts,tsx}'],
+    // Generated files carry blanket `eslint-disable` comments; never warn that one is "unused".
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: { ecmaFeatures: { jsx: true } },

@@ -6,7 +6,8 @@ import PixelHeart from './PixelHeart'
 import { publicRows } from './sharing'
 import { usePublicVitals } from './useVitalsSharing'
 import { timeAgo } from './VitalCard'
-import { worst } from './limits'
+import { alienFor } from './aliens'
+import { formatChance, survivalRating, worst } from './limits'
 
 export default function ProfileVitals({ userId, isMe }: { userId: string; isMe: boolean }) {
   const pub = usePublicVitals(userId)
@@ -14,6 +15,8 @@ export default function ProfileVitals({ userId, isMe }: { userId: string; isMe: 
   const rows = publicRows(pub.data)
   if (rows.length === 0) return null
   const overall = worst(rows.map((r) => r.check.level))
+  const survival = survivalRating(rows)
+  const alien = alienFor(pub.data.body ?? 'earth')
 
   return (
     <section aria-labelledby="profile-vitals" className="border bg-card p-4">
@@ -26,6 +29,10 @@ export default function ProfileVitals({ userId, isMe }: { userId: string; isMe: 
           {pub.data.takenAt ? timeAgo(new Date(pub.data.takenAt).toISOString()) : ''}
         </span>
       </div>
+      <p className="mb-3 text-sm">
+        Survival rating <strong className="font-signal text-lg">{formatChance(survival.score)}</strong> chance of survival · {survival.label}
+        {alien && <span className="text-muted-foreground"> · {alien.name}</span>}
+      </p>
       <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
         {rows.map((r) => (
           <li key={r.label} className="flex items-center gap-2 text-sm">
