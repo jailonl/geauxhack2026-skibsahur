@@ -10,7 +10,13 @@
 import type { CronTask } from 'deepspace/worker'
 import { buildCronContext } from 'deepspace/worker'
 import type { Env } from '../worker'
-import { describeError, generateBotPost, generateOperatorReply, type ChatLine } from './features/comms/ai'
+import {
+  describeError, generateBotPost, generateBotReply, generateForumComment, generateForumThread, generateOperatorReply,
+  type ChatLine,
+} from './features/comms/ai'
+import { pickPersona, toBotPost } from './features/comms/bots'
+import { colonistFor } from './features/forums/colonists'
+import { FORUMS } from './features/forums/forums'
 import { findOperator, type Operator } from './features/social/operators'
 import { lightDelaySeconds, type Body } from './lib/space'
 
@@ -29,9 +35,15 @@ const HISTORY_SIZE = 8
 // What the operator says if the AI call fails, so a colonist is never left without an answer.
 const FALLBACK_REPLY = 'Signal garbled on our end. Please repeat your last transmission.'
 
+// Bot colonists post a new forum thread or comment this often (one AI call each).
+const FORUM_CHATTER_MINUTES = 20
+// Chance that a bot run also replies to a recent post by a person (one more AI call).
+const BOT_REPLY_CHANCE = 0.5
+
 export const tasks: CronTask[] = [
   { name: 'colony-bots', intervalMinutes: BOT_INTERVAL_MINUTES },
   { name: 'operator-replies', intervalMinutes: 1 },
+  { name: 'forum-chatter', intervalMinutes: FORUM_CHATTER_MINUTES },
 ]
 
 type Dm = {
@@ -62,7 +74,18 @@ export async function runTask(name: string, env: Env): Promise<void> {
     } catch (err) {
       console.error(`[colony-bots] could not post: ${describeError(err)}`)
     }
+    if (Math.random() < BOT_REPLY_CHANCE) await replyToAPerson(env, ctx)
     await deleteOldBotPosts(ctx)
+    return
+  }
+
+  if (name === 'forum-chatter') {
+    if (isLocalDev(env)) return
+    try {
+      await forumChatter(env, ctx)
+    } catch (err) {
+      console.error(`[forum-chatter] failed: ${describeError(err)}`)
+    }
     return
   }
 
@@ -189,4 +212,59 @@ async function deleteOldBotPosts(ctx: Ctx): Promise<void> {
   } catch (err) {
     console.error(`[colony-bots] cleanup failed: ${describeError(err)}`)
   }
+}
+
+type FeedPost = { text: string; authorName?: string; botKind?: string; replyToId?: string }
+
+/** Reply, in character, to one recent post by a person that no bot has answered yet. */
+async function replyToAPerson(env: Env, ctx: Ctx): Promise<void> {
+  try {
+    const recent = (await ctx.records.query('posts', { limit: 60 })) as StoredRecord<FeedPost>[] // newest first
+    const sixHoursAgo = Date.now() - 6 * 60 * 60_000
+    const answered = new Set(recent.filter((r) => r.data.botKind && r.data.replyToId).map((r) => r.data.replyToId))
+    const candidates = recent.filter(
+      (r) =>
+        !r.data.botKind && !r.data.replyToId && !answered.has(r.recordId) &&
+        new Date(r.createdAt).getTime() > sixHoursAgo,
+    )
+    const target = candidates[Math.floor(Math.random() * candidates.length)]
+    if (!target) return
+
+    const persona = pickPersona()
+    const reply = await generateBotReply(env, persona, { authorName: target.data.authorName ?? 'colonist', text: target.data.text })
+    if (!reply) return
+    await ctx.records.create('posts', { ...toBotPost(persona, reply), replyToId: target.recordId })
+    console.log(`[colony-bots] ${persona.name} replied to ${target.recordId}`)
+  } catch (err) {
+    console.error(`[colony-bots] reply failed: ${describeError(err)}`)
+  }
+}
+
+type ThreadData = { forum: string; title: string; text?: string }
+type CommentData = { threadId: string; text: string; authorName?: string; botName?: string }
+
+/** One bot colonist either starts a new thread or joins a recent one, in a random forum. */
+async function forumChatter(env: Env, ctx: Ctx): Promise<void> {
+  const forum = FORUMS[Math.floor(Math.random() * FORUMS.length)]
+  const threads = (await ctx.records.query('threads', { where: { forum: forum.slug }, limit: 8 })) as StoredRecord<ThreadData>[]
+
+  // Mostly join existing conversations; start a new thread sometimes, or when the board is empty.
+  if (threads.length === 0 || Math.random() < 0.35) {
+    const colonist = colonistFor(forum.slug)
+    const thread = await generateForumThread(env, colonist, forum)
+    if (!thread) return
+    await ctx.records.create('threads', { forum: forum.slug, title: thread.title, text: thread.text, authorName: colonist.handle, botName: colonist.handle })
+    console.log(`[forum-chatter] @${colonist.handle} started a thread in ${forum.name}`)
+    return
+  }
+
+  const thread = threads[Math.floor(Math.random() * Math.min(threads.length, 4))] // one of the newest
+  const comments = (await ctx.records.query('comments', { where: { threadId: thread.recordId }, limit: 6 })) as StoredRecord<CommentData>[]
+  const recent = comments.reverse().map((c) => ({ author: c.data.botName ?? c.data.authorName ?? 'colonist', text: c.data.text }))
+  const lastAuthor = recent[recent.length - 1]?.author
+  const colonist = colonistFor(forum.slug, lastAuthor ? [lastAuthor] : []) // don't reply to yourself
+  const text = await generateForumComment(env, colonist, forum, thread.data, recent)
+  if (!text) return
+  await ctx.records.create('comments', { threadId: thread.recordId, text, authorName: colonist.handle, botName: colonist.handle })
+  console.log(`[forum-chatter] @${colonist.handle} commented in ${forum.name}`)
 }

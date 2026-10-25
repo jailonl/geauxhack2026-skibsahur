@@ -6,6 +6,7 @@ export type Settings = {
   theme: 'nightside' | 'dayside'
   textSize: 'small' | 'default' | 'large' | 'xlarge'
   highContrast: boolean
+  readableFont: boolean // Atkinson Hyperlegible everywhere
   reduceMotion: boolean
   compactPosts: boolean
   bandwidthSaver: boolean // don't load photos/videos until tapped (Mars has slow links)
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'nightside',
   textSize: 'default',
   highContrast: false,
+  readableFont: false,
   reduceMotion: false,
   compactPosts: false,
   bandwidthSaver: false,
@@ -49,6 +51,8 @@ export function applySettings(s: Settings = current) {
   html.style.setProperty('--app-font-size', TEXT_SIZES[s.textSize])
   if (s.highContrast) html.setAttribute('data-contrast', 'high')
   else html.removeAttribute('data-contrast')
+  if (s.readableFont) html.setAttribute('data-font', 'readable')
+  else html.removeAttribute('data-font')
   if (s.reduceMotion) html.setAttribute('data-motion', 'reduced')
   else html.removeAttribute('data-motion')
 }

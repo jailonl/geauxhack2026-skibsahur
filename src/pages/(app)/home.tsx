@@ -1,22 +1,24 @@
-// "/home" — the timeline, with a side column (wide screens): signal times, busy forums, and colonists to meet.
+// "/home" — the feed, with a live column on the left (wide screens): Colony pulse, signal times,
+// busy forums, and colonists to meet.
 import { Link } from 'react-router-dom'
-import { useQuery } from 'deepspace'
 import Feed from '../../features/comms/Feed'
+import ColonyPulse from '../../features/home/ColonyPulse'
 import SignalTimes from '../../features/home/SignalTimes'
-import { FORUMS, type Thread } from '../../features/forums/forums'
+import { FORUMS } from '../../features/forums/forums'
+import { useForumActivity } from '../../features/social/SocialProvider'
 import UserAvatar from '../../features/social/UserAvatar'
 import { useMyProfile, useProfiles } from '../../features/social/profiles'
 import { BODY_LABELS } from '../../lib/space'
 
 function BusyForums() {
-  const { records } = useQuery<Thread>('threads', { orderBy: 'createdAt', orderDir: 'desc', limit: 500 })
+  const { threads } = useForumActivity() // shared recent threads; no extra query
   const counts = new Map<string, number>()
-  for (const r of records) counts.set(r.data.forum, (counts.get(r.data.forum) ?? 0) + 1)
+  for (const r of threads) counts.set(r.data.forum, (counts.get(r.data.forum) ?? 0) + 1)
   const busiest = [...FORUMS].sort((a, b) => (counts.get(b.slug) ?? 0) - (counts.get(a.slug) ?? 0)).slice(0, 4)
 
   return (
     <section aria-labelledby="busy-forums" className="rounded-2xl border border-border bg-card p-4">
-      <h2 id="busy-forums" className="mb-3 font-display text-base font-bold">Busy forums</h2>
+      <h2 id="busy-forums" className="mb-3 font-display text-lg">Busy forums</h2>
       <ul className="space-y-1">
         {busiest.map((f) => (
           <li key={f.slug}>
@@ -42,7 +44,7 @@ function Colonists({ myId }: { myId: string | null }) {
 
   return (
     <section aria-labelledby="colonists" className="rounded-2xl border border-border bg-card p-4">
-      <h2 id="colonists" className="mb-3 font-display text-base font-bold">Colonists</h2>
+      <h2 id="colonists" className="mb-3 font-display text-lg">Colonists</h2>
       <ul className="space-y-2">
         {people.map((p) => (
           <li key={p.userId} className="flex items-center gap-3">
@@ -67,15 +69,18 @@ export default function HomePage() {
   const { profile } = useMyProfile()
 
   return (
-    <div className="mx-auto flex max-w-[1040px] justify-center gap-6">
-      <div className="w-full max-w-2xl min-w-0 border-x border-border">
+    <div className="mx-auto grid max-w-[1180px] gap-6 px-4 py-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <aside aria-label="Colony overview" className="hidden space-y-4 lg:block">
+        <div className="sticky top-5 max-h-[calc(100vh-7rem)] space-y-4 overflow-y-auto pb-4">
+          <ColonyPulse />
+          <SignalTimes home={profile?.homeBody ?? 'earth'} />
+          <BusyForums />
+          <Colonists myId={profile?.userId ?? null} />
+        </div>
+      </aside>
+      <div className="mx-auto w-full max-w-[680px] min-w-0">
         <Feed />
       </div>
-      <aside aria-label="Colony overview" className="sticky top-0 hidden h-screen w-80 shrink-0 space-y-4 overflow-y-auto py-4 pr-2 lg:block">
-        <SignalTimes home={profile?.homeBody ?? 'earth'} />
-        <BusyForums />
-        <Colonists myId={profile?.userId ?? null} />
-      </aside>
     </div>
   )
 }

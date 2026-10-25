@@ -1,7 +1,7 @@
 /**
  * App navigation.
- * - Desktop/tablet: a left rail with the wordmark, nav links, a Post button, and your account.
- * - Phones: a slim top bar, a bottom tab bar, and a floating Post button.
+ * - Top bar (all sizes): wordmark, main sections, search, notifications bell, Post button, account menu.
+ * - Phones: the sections move to a bottom tab bar, plus a floating Post button.
  * Links come from src/nav.ts (with role/dev filtering). Keep the data-testid hooks
  * (`app-navigation`, `nav-sign-in-button`, `nav-user-name`, `nav-user-email`) — the shipped tests use them.
  */
@@ -9,13 +9,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthProfileReady, signOut } from 'deepspace'
-import {
-  Ellipsis, House, LogOut, Mail, Map as MapIcon, MessagesSquare, Pencil, Plus, Settings, Shield, User,
-} from 'lucide-react'
+import { Bell, House, LogOut, Mail, Map as MapIcon, MessagesSquare, Pencil, Plus, Search, Settings, Shield, User } from 'lucide-react'
 import type { Role } from '../constants'
 import { nav } from '../nav'
 import { cn } from '../lib/utils'
 import ComposeDialog from '../features/comms/ComposeDialog'
+import { useNotifications } from '../features/notifications/notifications'
 import { applySettings } from '../features/settings/settings'
 import { SignInDialog } from '../features/social/SignIn'
 import { useMyProfile } from '../features/social/profiles'
@@ -34,20 +33,37 @@ const ICONS: Record<string, typeof House> = {
   '/forums': MessagesSquare,
   '/messages': Mail,
   '/map': MapIcon,
-  '/preferences': Settings,
   '/settings': Shield,
 }
 
 /** The brand mark: a world with an orbit and a signal riding it. */
-function Wordmark({ textClassName }: { textClassName: string }) {
+function Wordmark() {
   return (
-    <Link to="/home" className="flex items-center gap-2.5 rounded-full p-2 hover:bg-accent/60" aria-label="Colony home">
-      <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden>
+    <Link to="/home" className="flex shrink-0 items-center gap-2 rounded-full py-1 pr-2" aria-label="Colony, go to the feed">
+      <svg viewBox="0 0 32 32" className="h-8 w-8" aria-hidden>
         <circle cx="16" cy="16" r="6.5" fill="#e4572e" />
         <ellipse cx="16" cy="16" rx="14" ry="5.5" fill="none" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1.5" transform="rotate(-24 16 16)" />
         <circle cx="28.2" cy="10.6" r="2.2" fill="var(--color-primary)" />
       </svg>
-      <span className={cn('font-display text-xl font-bold tracking-tight', textClassName)}>Colony</span>
+      <span className="font-display text-2xl leading-none">Colony</span>
+    </Link>
+  )
+}
+
+/** Bell with an unread count. */
+function BellLink({ unread, className }: { unread: number; className?: string }) {
+  return (
+    <Link
+      to="/notifications"
+      aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
+      className={cn('relative rounded-full p-2 hover:bg-accent/60', className)}
+    >
+      <Bell className="h-5 w-5" aria-hidden />
+      {unread > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 min-w-[1.15rem] rounded-full bg-primary px-1 text-center text-[11px] font-bold leading-[1.15rem] text-primary-foreground">
+          {unread > 99 ? '99+' : unread}
+        </span>
+      )}
     </Link>
   )
 }
@@ -55,19 +71,19 @@ function Wordmark({ textClassName }: { textClassName: string }) {
 export default function Navigation() {
   const { isLoaded, isSignedIn, user, userLoading } = useAuthProfileReady({ requireUser: true })
   const { profile } = useMyProfile()
+  const { unread } = useNotifications()
   const location = useLocation()
   const navigate = useNavigate()
   const [showSignIn, setShowSignIn] = useState(false)
   const [showCompose, setShowCompose] = useState(false)
 
-  // Apply saved appearance settings (theme, text size, contrast, motion) once on load.
+  // Apply saved appearance settings (theme, text size, font, contrast, motion) once on load.
   useEffect(() => {
     applySettings()
   }, [])
 
   const profileReady = !isSignedIn || (!userLoading && !!user)
   const userRole = (user?.role ?? 'anonymous') as Role | 'anonymous'
-
   const visibleNav = nav.filter((item) => {
     if (item.devOnly && !import.meta.env.DEV) return false
     if (!item.roles) return true
@@ -77,10 +93,7 @@ export default function Navigation() {
   })
 
   const profilePath = profile ? `/u/${profile.username}` : '/profile'
-  const isActive = (path: string) =>
-    path === '/profile-link'
-      ? location.pathname.startsWith('/u/') || location.pathname === '/profile'
-      : location.pathname === path || location.pathname.startsWith(path + '/')
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
 
   function onPost() {
     if (!isSignedIn) setShowSignIn(true)
@@ -88,158 +101,132 @@ export default function Navigation() {
     else setShowCompose(true)
   }
 
-  const railLink = (path: string, label: string, Icon: typeof House, to = path) => {
-    const active = isActive(path)
-    return (
-      <Link
-        key={path}
-        to={to}
-        aria-current={active ? 'page' : undefined}
-        title={label}
-        className={cn(
-          'flex items-center gap-4 rounded-full p-3 text-lg transition-colors hover:bg-accent/60 xl:pr-6',
-          active ? 'font-bold text-foreground' : 'text-foreground/85',
-        )}
-      >
-        <Icon className="h-[26px] w-[26px] shrink-0" strokeWidth={active ? 2.5 : 1.75} aria-hidden />
-        <span className="hidden xl:inline">{label}</span>
-      </Link>
-    )
+  function onSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const q = String(new FormData(e.currentTarget).get('q') ?? '').trim()
+    navigate(q ? `/search?q=${encodeURIComponent(q)}` : '/search')
   }
-
-  const accountMenu = isSignedIn && user && (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            aria-label="Account menu"
-            className="flex w-full items-center gap-3 rounded-full p-2 text-left transition-colors hover:bg-accent/60"
-          >
-            <UserAvatar name={profile?.username ?? user.name ?? '?'} avatarKey={profile?.avatarKey} accent={profile?.accent} size={40} />
-            <span className="hidden min-w-0 flex-1 xl:block">
-              <span data-testid="nav-user-name" className="block truncate font-bold leading-tight">
-                {profile?.displayName || user.name || user.email}
-              </span>
-              <span className="block truncate text-sm text-muted-foreground">
-                {profile ? `@${profile.username}` : 'Set up your profile'}
-              </span>
-            </span>
-            <Ellipsis className="hidden h-5 w-5 text-muted-foreground xl:block" aria-hidden />
-          </button>
-        }
-      />
-      <DropdownMenuContent align="start" className="w-60">
-        <DropdownMenuLabel>
-          <div className="truncate font-medium text-foreground">{profile ? `@${profile.username}` : user.name || 'Signed in'}</div>
-          <div data-testid="nav-user-email" className="truncate text-xs font-normal text-muted-foreground">
-            {user.email}
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {profile && (
-          <DropdownMenuItem onClick={() => navigate(`/u/${profile.username}`)}>
-            <User aria-hidden />
-            My profile
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuItem onClick={() => navigate('/profile')}>
-          <Pencil aria-hidden />
-          {profile ? 'Edit profile' : 'Set up profile'}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/preferences')}>
-          <Settings aria-hidden />
-          Settings
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>
-          <LogOut aria-hidden />
-          Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-
-  // Phone tab bar: the four main places plus your profile.
-  const tabs: { path: string; to: string; label: string; Icon: typeof House }[] = [
-    { path: '/home', to: '/home', label: 'Home', Icon: House },
-    { path: '/forums', to: '/forums', label: 'Forums', Icon: MessagesSquare },
-    { path: '/messages', to: '/messages', label: 'Messages', Icon: Mail },
-    { path: '/map', to: '/map', label: 'Map', Icon: MapIcon },
-    { path: '/profile-link', to: isSignedIn ? profilePath : '/preferences', label: isSignedIn ? 'Profile' : 'Settings', Icon: isSignedIn ? User : Settings },
-  ]
 
   return (
     <>
-      {/* Desktop / tablet rail */}
-      <aside
-        data-testid="app-navigation"
-        className="sticky top-0 hidden h-screen w-[84px] shrink-0 flex-col items-center border-r border-border px-2 py-3 md:flex xl:w-[260px] xl:items-stretch xl:px-4"
-      >
-        <Wordmark textClassName="hidden xl:inline" />
-        <nav aria-label="Main" className="mt-2 flex flex-col items-center gap-1 xl:items-stretch">
-          {visibleNav.map((item) => railLink(item.path, item.label, ICONS[item.path] ?? House))}
-          {isSignedIn && railLink('/profile-link', 'Profile', User, profilePath)}
-        </nav>
+      <header data-testid="app-navigation" className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-[1180px] items-center gap-2 px-4">
+          <Wordmark />
 
-        <button
-          type="button"
-          onClick={onPost}
-          aria-label="Write a post"
-          className="mt-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground shadow-[0_6px_24px_-6px_var(--color-primary)] hover:brightness-105 xl:h-auto xl:w-full xl:py-3.5"
-        >
-          <Plus className="h-6 w-6 xl:hidden" aria-hidden />
-          <span className="hidden xl:inline">Post</span>
-        </button>
+          {/* Main sections (tablet and up) */}
+          <nav aria-label="Main" className="ml-4 hidden items-center gap-1 md:flex">
+            {visibleNav.map((item) => {
+              const Icon = ICONS[item.path] ?? House
+              const active = isActive(item.path)
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-2 rounded-full px-3.5 py-2 text-[15px] transition-colors',
+                    active ? 'bg-accent font-bold text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                  )}
+                >
+                  <Icon className="h-[18px] w-[18px]" aria-hidden />
+                  <span className="hidden lg:inline">{item.label}</span>
+                  <span className="sr-only lg:hidden">{item.label}</span>
+                </Link>
+              )
+            })}
+          </nav>
 
-        <div className="mt-auto w-full">
+          <div className="flex-1" />
+
+          {/* Search (tablet and up); phones get the icon */}
+          <form role="search" onSubmit={onSearch} className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 md:flex">
+            <Search className="h-4 w-4 text-muted-foreground" aria-hidden />
+            <label htmlFor="nav-search" className="sr-only">Search the colony</label>
+            <input id="nav-search" name="q" placeholder="Search the colony" className="w-36 bg-transparent py-2 text-sm outline-none lg:w-52" />
+          </form>
+          <Link to="/search" aria-label="Search" className="rounded-full p-2 hover:bg-accent/60 md:hidden">
+            <Search className="h-5 w-5" aria-hidden />
+          </Link>
+
+          {isSignedIn && <BellLink unread={unread} />}
+
+          <button
+            type="button"
+            onClick={onPost}
+            className="ml-1 hidden items-center gap-1.5 rounded-full bg-primary px-5 py-2 font-bold text-primary-foreground shadow-[0_6px_20px_-8px_var(--color-primary)] hover:brightness-105 md:flex"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Post
+          </button>
+
           {!isLoaded ? null : isSignedIn && !profileReady ? (
-            <div className="flex items-center gap-3 p-2">
-              <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
-              <div className="hidden h-4 w-28 animate-pulse rounded-md bg-muted xl:block" />
-            </div>
+            <div className="ml-1 h-9 w-9 animate-pulse rounded-full bg-muted" />
           ) : isSignedIn && user ? (
-            accountMenu
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <button aria-label="Account menu" className="ml-1 flex items-center gap-2 rounded-full p-0.5 hover:bg-accent/60">
+                    <UserAvatar name={profile?.username ?? user.name ?? '?'} avatarKey={profile?.avatarKey} accent={profile?.accent} size={36} />
+                    <span data-testid="nav-user-name" className="sr-only">{profile?.displayName || user.name || user.email}</span>
+                  </button>
+                }
+              />
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuLabel>
+                  <div className="truncate font-medium text-foreground">{profile ? `@${profile.username}` : user.name || 'Signed in'}</div>
+                  <div data-testid="nav-user-email" className="truncate text-xs font-normal text-muted-foreground">{user.email}</div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate(profilePath)}>
+                  <User aria-hidden />
+                  {profile ? 'My profile' : 'Set up profile'}
+                </DropdownMenuItem>
+                {profile && (
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <Pencil aria-hidden />
+                    Edit profile
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => navigate('/preferences')}>
+                  <Settings aria-hidden />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut aria-hidden />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <button
-              data-testid="nav-sign-in-button"
-              onClick={() => setShowSignIn(true)}
-              className="w-full rounded-full border border-border px-3 py-2.5 font-bold hover:bg-accent/60"
-            >
-              <span className="hidden xl:inline">Sign in</span>
-              <User className="mx-auto h-5 w-5 xl:hidden" aria-label="Sign in" />
-            </button>
+            <>
+              <Link to="/preferences" aria-label="Settings" className="rounded-full p-2 hover:bg-accent/60">
+                <Settings className="h-5 w-5" aria-hidden />
+              </Link>
+              <button
+                data-testid="nav-sign-in-button"
+                onClick={() => setShowSignIn(true)}
+                className="ml-1 rounded-full border border-border px-4 py-2 text-sm font-bold hover:bg-accent/60"
+              >
+                Sign in
+              </button>
+            </>
           )}
         </div>
-      </aside>
-
-      {/* Phone top bar */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/90 px-3 py-1.5 backdrop-blur md:hidden">
-        {isSignedIn && user ? (
-          <Link to={profilePath} aria-label="My profile">
-            <UserAvatar name={profile?.username ?? user.name ?? '?'} avatarKey={profile?.avatarKey} accent={profile?.accent} size={32} />
-          </Link>
-        ) : (
-          <button type="button" onClick={() => setShowSignIn(true)} className="rounded-full border border-border px-3 py-1 text-sm font-bold">
-            Sign in
-          </button>
-        )}
-        <Wordmark textClassName="" />
-        <Link to="/preferences" aria-label="Settings" className="rounded-full p-2 hover:bg-accent/60">
-          <Settings className="h-5 w-5" aria-hidden />
-        </Link>
       </header>
 
       {/* Phone bottom tab bar */}
       <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        aria-label="Sections"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        {tabs.map(({ path, to, label, Icon }) => {
-          const active = isActive(path)
+        {visibleNav.filter((i) => !i.roles).slice(0, 4).map((item) => {
+          const Icon = ICONS[item.path] ?? House
+          const active = isActive(item.path)
           return (
-            <Link key={path} to={to} aria-label={label} aria-current={active ? 'page' : undefined} className="flex flex-col items-center gap-0.5 py-2 text-[11px]">
-              <Icon className={cn('h-6 w-6', active ? 'text-foreground' : 'text-muted-foreground')} strokeWidth={active ? 2.5 : 1.75} aria-hidden />
-              <span className={active ? 'font-bold' : 'text-muted-foreground'}>{label}</span>
+            <Link key={item.path} to={item.path} aria-current={active ? 'page' : undefined} className="flex flex-col items-center gap-0.5 py-2 text-[11px]">
+              <Icon className={cn('h-6 w-6', active ? 'text-primary' : 'text-muted-foreground')} strokeWidth={active ? 2.4 : 1.8} aria-hidden />
+              <span className={active ? 'font-bold' : 'text-muted-foreground'}>{item.label}</span>
             </Link>
           )
         })}
@@ -250,7 +237,7 @@ export default function Navigation() {
         type="button"
         onClick={onPost}
         aria-label="Write a post"
-        className="fixed bottom-20 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_28px_-6px_var(--color-primary)] md:hidden"
+        className="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_28px_-6px_var(--color-primary)] md:hidden"
       >
         <Plus className="h-7 w-7" aria-hidden />
       </button>

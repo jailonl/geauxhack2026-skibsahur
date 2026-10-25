@@ -9,7 +9,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
-      <h1 className="font-display text-xl font-bold">Your profile</h1>
+      <h1 className="font-display text-3xl">Your profile</h1>
       {!isSignedIn ? (
         <SignInPrompt action="create your profile" />
       ) : loading ? (

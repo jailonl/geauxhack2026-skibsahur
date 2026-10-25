@@ -33,10 +33,10 @@ export default function AppLayout() {
       <title>{APP_NAME}</title>
       <AuthBoot>
         <SocialProvider>
-        <div className="flex h-screen flex-col overflow-hidden bg-background md:flex-row md:justify-center">
+        <div className="flex h-screen flex-col overflow-hidden bg-background">
           <Navigation />
           {/* pb-24 leaves room for the phone tab bar and floating Post button */}
-          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pb-24 md:max-w-[1100px] md:pb-0">
+          <main className="min-h-0 flex-1 overflow-y-auto pb-24 md:pb-8">
             <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">Loading...</div>}>
               <Outlet />
             </Suspense>

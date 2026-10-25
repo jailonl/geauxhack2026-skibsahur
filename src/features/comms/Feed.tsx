@@ -84,59 +84,62 @@ export default function Feed() {
   }
 
   return (
-    <div>
-      {/* Sticky header: title + world tabs */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/85 backdrop-blur">
-        <div className="flex items-center justify-between px-4 pt-3">
-          <h1 className="font-display text-xl font-bold">Home</h1>
-          <div className="flex items-center gap-3 text-sm">
-            <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={showBots}
-                onChange={(e) => updateSettings({ showBots: e.target.checked })}
-                className="accent-[var(--color-primary)]"
-              />
-              Bots
-            </label>
-            {isAdmin && (
-              <button type="button" onClick={onSummonBot} disabled={summoning} className="text-primary hover:underline disabled:opacity-50">
-                {summoning ? 'Summoning...' : 'Summon a bot'}
-              </button>
-            )}
-          </div>
+    <div className="space-y-3">
+      {/* Header: title, world filter, bot toggle */}
+      <header className="flex flex-wrap items-end justify-between gap-3 pt-1">
+        <div>
+          <h1 className="font-display text-3xl leading-none">The feed</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Transmissions from every colony, as they arrive.</p>
         </div>
-        <nav aria-label="Filter by world" className="mt-1 flex overflow-x-auto">
-          {TABS.map((t) => {
-            const active = tab === t
-            return (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                aria-pressed={active}
-                className={`relative flex-1 whitespace-nowrap px-4 py-3 text-sm hover:bg-accent/40 ${active ? 'font-bold text-foreground' : 'text-muted-foreground'}`}
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  {t !== 'all' && <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: PLANET_COLORS[t] }} />}
-                  {t === 'all' ? 'Everywhere' : BODY_LABELS[t]}
-                </span>
-                {active && <span aria-hidden className="absolute inset-x-1/4 bottom-0 h-1 rounded-full bg-primary" />}
-              </button>
-            )
-          })}
-        </nav>
+        <div className="flex items-center gap-3 text-sm">
+          <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={showBots}
+              onChange={(e) => updateSettings({ showBots: e.target.checked })}
+              className="accent-[var(--color-primary)]"
+            />
+            Show bots
+          </label>
+          {isAdmin && (
+            <button type="button" onClick={onSummonBot} disabled={summoning} className="font-bold text-primary hover:underline disabled:opacity-50">
+              {summoning ? 'Summoning...' : 'Summon a bot'}
+            </button>
+          )}
+        </div>
       </header>
 
-      <div className="border-b border-border px-4 py-3">
-        <PostComposer compact bare />
-      </div>
+      <nav aria-label="Filter by world" className="flex gap-2 overflow-x-auto pb-1">
+        {TABS.map((t) => {
+          const active = tab === t
+          const color = t === 'all' ? 'var(--color-primary)' : PLANET_COLORS[t]
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              aria-pressed={active}
+              className="flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-bold transition-colors"
+              style={
+                active
+                  ? { background: `color-mix(in srgb, ${color} 22%, transparent)`, borderColor: color, color: 'var(--color-foreground)' }
+                  : { borderColor: 'var(--color-border)', color: 'var(--color-muted-foreground)' }
+              }
+            >
+              <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: color }} />
+              {t === 'all' ? 'Every world' : BODY_LABELS[t]}
+            </button>
+          )
+        })}
+      </nav>
 
-      {feed.status === 'loading' && <p className="px-4 py-6 text-muted-foreground">Tuning in to the colony feed...</p>}
-      {feed.status === 'error' && <p role="alert" className="px-4 py-6 text-destructive">Could not load the feed: {feed.error}</p>}
+      <PostComposer compact />
+
+      {feed.status === 'loading' && <p className="py-6 text-muted-foreground">Tuning in to the colony feed...</p>}
+      {feed.status === 'error' && <p role="alert" className="py-6 text-destructive">Could not load the feed: {feed.error}</p>}
       {feed.status === 'ready' && visible.length === 0 && (
-        <p className="px-4 py-10 text-center text-muted-foreground">
-          {tab === 'all' ? 'No posts yet. Be the first to post.' : `No posts tagged ${BODY_LABELS[tab]} yet. Tag a location when you post.`}
+        <p className="rounded-2xl border border-dashed border-border py-10 text-center text-muted-foreground">
+          {tab === 'all' ? 'No transmissions yet. Be the first to post.' : `Nothing tagged ${BODY_LABELS[tab]} yet. Tag a location when you post.`}
         </p>
       )}
 

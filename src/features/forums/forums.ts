@@ -47,8 +47,8 @@ export function findForum(slug: string): Forum | undefined {
   return FORUMS.find((f) => f.slug === slug)
 }
 
-export type Thread = { forum: string; title: string; text?: string; authorName?: string }
-export type Comment = { threadId: string; parentId?: string; text: string; authorName?: string }
+export type Thread = { forum: string; title: string; text?: string; authorName?: string; botName?: string }
+export type Comment = { threadId: string; parentId?: string; text: string; authorName?: string; botName?: string }
 export type Vote = { targetId: string; value: number; userId?: string }
 
 /** All votes, summed per thread/comment, plus my own vote on each (so clicking again undoes it). */

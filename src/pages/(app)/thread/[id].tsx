@@ -2,9 +2,9 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
+import ForumAuthor from '../../../features/forums/ForumAuthor'
 import VoteButtons from '../../../features/forums/VoteButtons'
 import { findForum, useVotes, type Comment, type Thread, type Votes } from '../../../features/forums/forums'
-import UserAvatar from '../../../features/social/UserAvatar'
 import ProfileEditor from '../../../features/social/ProfileEditor'
 import { useMyProfile, useProfiles, type Profiles, type ProfileRecord } from '../../../features/social/profiles'
 import { SignInPrompt } from '../../../features/social/SignIn'
@@ -63,19 +63,17 @@ function CommentItem(props: {
 }) {
   const { c, replies, profiles, votes, me, canDelete, onDelete } = props
   const [replying, setReplying] = useState(false)
-  const author = profiles.byUserId.get(c.createdBy)
-  const name = author?.username ?? c.data.authorName ?? 'unknown'
+  const name = c.data.botName ?? profiles.byUserId.get(c.createdBy)?.username ?? c.data.authorName ?? 'unknown'
 
   return (
     <li className="flex gap-2">
       <VoteButtons id={c.recordId} votes={votes} enabled={Boolean(me)} label={`comment by ${name}`} />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 text-sm">
-          <UserAvatar name={name} avatarKey={author?.avatarKey} accent={author?.accent} size={20} />
-          {author ? <Link to={`/u/${name}`} className="font-semibold hover:underline">@{name}</Link> : <strong>@{name}</strong>}
+          <ForumAuthor createdBy={c.createdBy} botName={c.data.botName} fallbackName={c.data.authorName} profiles={profiles} withAvatar />
           <span className="text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
         </p>
-        <p className="mt-1 whitespace-pre-wrap break-words">{c.data.text}</p>
+        <p className="font-post mt-1 whitespace-pre-wrap break-words">{c.data.text}</p>
         <div className="mt-1 flex gap-3 text-sm text-muted-foreground">
           {me && !c.data.parentId && (
             <button type="button" onClick={() => setReplying(!replying)} className="hover:underline">Reply</button>
@@ -126,7 +124,6 @@ export default function ThreadPage() {
   }
 
   const forum = findForum(t.data.forum)
-  const author = profiles.byUserId.get(t.createdBy)
   const all = comments.records as CommentRecord[]
   const topLevel = all.filter((c) => !c.data.parentId)
   const repliesTo = (parentId: string) => all.filter((c) => c.data.parentId === parentId)
@@ -148,11 +145,11 @@ export default function ThreadPage() {
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground">
             {forum?.name} · posted by{' '}
-            {author ? <Link to={`/u/${author.username}`} className="underline">@{author.username}</Link> : `@${t.data.authorName ?? 'unknown'}`}
+            <ForumAuthor createdBy={t.createdBy} botName={t.data.botName} fallbackName={t.data.authorName} profiles={profiles} />
             {' · '}{new Date(t.createdAt).toLocaleString()}
           </p>
-          <h1 className="mt-1 text-xl font-bold">{t.data.title}</h1>
-          {t.data.text && <p className="mt-2 whitespace-pre-wrap break-words">{t.data.text}</p>}
+          <h1 className="mt-1 font-display text-2xl">{t.data.title}</h1>
+          {t.data.text && <p className="font-post mt-2 whitespace-pre-wrap break-words text-[1.05rem]">{t.data.text}</p>}
           {canDelete(t) && (
             <button type="button" onClick={onDeleteThread} className="mt-2 text-sm text-destructive hover:underline">Delete thread</button>
           )}
