@@ -5,7 +5,7 @@ import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
 import type { MapBody, PointOfInterest } from '../../features/map/types'
 import { findForum } from '../../features/forums/forums'
 import { MAP_BODIES } from '../../features/map/poi-logic'
-import MapView from '../../features/map/MapView'
+import MapView, { TREK } from '../../features/map/MapView'
 import PoiForm from '../../features/map/PoiForm'
 
 const BODY_LABELS: Record<string, string> = {
@@ -72,7 +72,20 @@ export default function MapPage() {
 
       {status === 'error' && <p role="alert" className="text-destructive">Could not load the map: {error}</p>}
 
-      <MapView pois={records} picked={picked} onPick={(lat, lng) => setPicked({ lat, lng })} />
+      <div>
+        <MapView
+          body={body}
+          tint={findForum(body)?.accent}
+          pois={records}
+          picked={picked}
+          onPick={(lat, lng) => setPicked({ lat, lng })}
+        />
+        {TREK[body] && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Terrain: NASA Solar System Treks, {TREK[body]?.credit} imagery.
+          </p>
+        )}
+      </div>
 
       <PoiForm
         body={body}
