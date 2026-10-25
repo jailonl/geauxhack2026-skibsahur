@@ -49,7 +49,7 @@ export default function MapPage() {
     <main className="mx-auto max-w-3xl space-y-4 p-4">
       <h1 className="text-2xl font-bold">Points of Interest</h1>
 
-      {/* Icon and color come from the matching forum, so the map and forums look the same. */}
+      {/* Color comes from the matching forum, so the map and forums look the same. */}
       <div role="tablist" aria-label="Planet" className="flex flex-wrap gap-2">
         {MAP_BODIES.map((b) => {
           const forum = findForum(b)
@@ -64,7 +64,6 @@ export default function MapPage() {
               style={selected ? { backgroundColor: forum?.accent, borderColor: forum?.accent } : { borderColor: forum?.accent }}
               className={`rounded-md border px-3 py-1 ${selected ? 'font-semibold text-black' : 'bg-background'}`}
             >
-              {forum && <span aria-hidden="true">{forum.glyph} </span>}
               {BODY_LABELS[b]}
             </button>
           )
