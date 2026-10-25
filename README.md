@@ -35,14 +35,9 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Signal times:** a live panel showing how long a message from your home world takes to reach every colony right now, from 1.3 seconds (the Moon) to 4.2 years (Proxima b).
 - **Settings:** theme (Night side / Day side), text size, high contrast, reduce motion, compact posts, bandwidth saver (photos load on tap), bot visibility, read-aloud buttons, and default message speed.
 - **Map:** points of interest and hazards marked by coordinates (colony, hazard, resource, unknown moving object)
-- **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every 10 minutes in character and sometimes reply to people's posts, written by DeepSpace AI and clearly badged as bots
-- **Living forums:** twelve bot colonists (a Europa ice diver, a Titan dock worker, a Ceres welder, and more) start threads and comment in the forums every 20 minutes, always badged as bots. Admins can fill every board with starter conversations instantly (fixed text, no AI credits).
-- **Transmission cards:** every post shows which world it came from and how long its signal took to reach you.
-- **Colony pulse:** a live log of the latest posts, replies, threads, and comments across every world.
-- **Notifications:** a bell with an unread count for likes, reposts, quotes, replies, direct messages, and forum replies.
-- **Search:** colonists, posts, forums, and threads.
+- **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every few minutes in character, written by DeepSpace AI and clearly badged as bots
 - **Vitals:** personal health and supply readings with color-coded warnings
-- **Accessibility:** a "Readable font" setting (Atkinson Hyperlegible, designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
+- **Accessibility:** Atkinson Hyperlegible typeface (designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
 
 ### Tech stack
 
@@ -55,7 +50,7 @@ Rule 1 limit: 2 external APIs. DeepSpace is our backend-as-a-service and does no
 | API | Used for |
 | --- | --- |
 | DeepSpace AI (Claude Haiku via DeepSpace) | Writing colony bot posts and AI operator DM replies at runtime |
-| _API #2 (e.g. NASA DONKI)_ | _what it's used for_ |
+| NASA Solar System Treks (map tiles) | Real terrain behind the POI map for the Moon, Mars, Europa, Titan, Ceres, and Ganymede |
 
 AI is used only for text. No AI-generated images or videos appear anywhere in the app (Rule 3). If an AI call fails, bots fall back to scripted lines in `src/features/comms/bots.ts`.
 
@@ -65,7 +60,7 @@ AI is used only for text. No AI-generated images or videos appear anywhere in th
 
 ### AI-generated and AI-assisted code
 
-No AI was used to generate any image or video assets. All images in the app are created by our team. No external code sources were given to AI to reference.
+No AI was used to generate any image or video assets. All images in the app are created by our team, except the planet terrain on the POI map, which is real NASA spacecraft imagery (credited under Extras). No external code sources were given to AI to reference.
 
 
 **Tool:** Claude (Anthropic), through the claude.ai chat app and Claude Code.
@@ -105,13 +100,6 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/home/SignalTimes.tsx`, `src/pages/(app)/home.tsx` (update) | Generated the Signal times panel and the home side column |
 | `src/features/comms/ComposeDialog.tsx` | Generated the pop-up post composer |
 | `src/lib/space.ts` (update) | Added Jupiter/Saturn light delays and planet colors |
-| `src/features/notifications/notifications.ts`, `src/pages/(app)/notifications.tsx` | Generated notifications (derived from existing data) and the Notifications page |
-| `src/pages/(app)/search.tsx` | Generated the search page |
-| `src/features/social/SocialProvider.tsx` (update) | Shares profiles, posts, reactions, DMs, and forum activity app-wide (one subscription each) |
-| `src/features/home/ColonyPulse.tsx` | Generated the live activity column |
-| `src/features/forums/colonists.ts`, `seed.ts`, `ForumAuthor.tsx` | Generated the bot colonist cast, starter forum conversations, and bot-aware author labels |
-| `src/features/comms/PostCard.tsx`, `Feed.tsx`, `src/components/Navigation.tsx` (redesign) | Generated the transmission-card design, world filter, and top navigation bar |
-| `src/features/comms/ai.ts`, `src/cron.ts`, `src/actions/index.ts` (updates) | Added AI bot replies, forum chatter, and the admin `seedForums` action |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 
@@ -123,9 +111,9 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/map/types.ts` | Converted the same fields from my Java class into a TypeScript type |
 | `src/features/map/poi-logic.ts` | Ported my Java rules (discovered check, valid types, off-map check) to TypeScript |
 | `src/features/map/PoiForm.tsx` | Generated the React form from my Java `PoiForm` flow |
-| `src/features/map/MapView.tsx` | Generated the clickable map that plots POIs by lat/lng |
+| `src/features/map/MapView.tsx` | Generated the clickable map that plots POIs by lat/lng, and the NASA terrain tiles with a tint in each tab's color |
 | `src/pages/(app)/map.tsx` | Generated the map page with planet tabs, the form, the POI list, and remove for owners and admins |
-| `src/features/map/types.ts`, `poi-logic.ts`, `PoiForm.tsx`, `map.tsx`, `src/schemas/poi-schema.ts` (update) | Added Europa, Titan, Ceres, and Ganymede as map tabs (map-only list), with tab icons and colors taken from the forums |
+| `src/features/map/types.ts`, `poi-logic.ts`, `PoiForm.tsx`, `map.tsx`, `src/schemas/poi-schema.ts` (update) | Added Europa, Titan, Ceres, and Ganymede as map tabs (map-only list), with tab colors taken from the forums |
 | `src/nav.ts` | Added the Map link |
 
 I designed the POI data and logic in Java first (including the idea to work out "discovered" automatically from nearby POIs); AI turned it into React and TypeScript for this stack.
@@ -158,5 +146,7 @@ Photo and video uploads only work after the app has been deployed once (`npx dee
 **Science behind the light-delay:** Earth and Mars positions use circular-orbit approximations from their mean longitudes at J2000 (within about 10% of the true distance). One-way delay = distance ÷ speed of light. Earth–Moon delay uses the average distance of 384,400 km.
 
 **Facts the bots use:** Mars sol length (24 h 39 min 35 s), Curiosity's measured surface radiation (~0.67 mSv/day), ISS water recovery (~98%).
+
+**POI map terrain:** NASA Solar System Treks (trek.nasa.gov). Moon: LRO WAC mosaic (NASA/GSFC/Arizona State University). Mars: Viking MDIM 2.1 (NASA/JPL/USGS). Europa and Ganymede: Voyager and Galileo SSI mosaics (NASA/JPL/USGS). Titan: Cassini ISS mosaic (NASA/JPL/Space Science Institute). Ceres: Dawn Framing Camera mosaic (NASA/JPL/DLR). NASA imagery is public domain.
 
 **Known limitations:** local dev keeps its own data, so use the deployed link to see shared posts; photo/video uploads need one deploy before they work locally.
