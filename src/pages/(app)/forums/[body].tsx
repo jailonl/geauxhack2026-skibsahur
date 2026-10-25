@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutations, useQuery } from 'deepspace'
+import ForumAuthor from '../../../features/forums/ForumAuthor'
 import VoteButtons from '../../../features/forums/VoteButtons'
 import { FORUMS, findForum, useVotes, type Comment, type Thread } from '../../../features/forums/forums'
 import ProfileEditor from '../../../features/social/ProfileEditor'
@@ -70,8 +71,8 @@ export default function ForumPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 pb-8">
-      <header className="border-b border-border">
+    <div className="mx-auto max-w-3xl space-y-4 px-4 py-5">
+      <header className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="h-24" style={{ background: `radial-gradient(100% 160% at 15% 0%, ${forum.accent}66 0%, transparent 70%)` }} />
         <div className="-mt-8 flex items-end gap-3 px-4 pb-4">
           <span
@@ -83,12 +84,12 @@ export default function ForumPage() {
           </span>
           <div className="min-w-0">
             <Link to="/forums" className="text-sm text-muted-foreground hover:underline">Forums</Link>
-            <h1 className="font-display text-xl font-bold">{forum.name}</h1>
+            <h1 className="font-display text-3xl leading-tight">{forum.name}</h1>
             <p className="text-sm text-muted-foreground">{forum.tagline}</p>
           </div>
         </div>
       </header>
-      <div className="space-y-4 px-4">
+      <div className="space-y-4">
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div role="group" aria-label="Sort threads" className="flex gap-2">
@@ -139,17 +140,16 @@ export default function ForumPage() {
 
       <ul className="space-y-2">
         {list.map((t) => {
-          const author = profiles.byUserId.get(t.createdBy)
           const n = commentCount(t.recordId)
           return (
             <li key={t.recordId} className="flex gap-3 rounded-xl border border-border bg-card p-3 hover:bg-accent/30">
               <VoteButtons id={t.recordId} votes={votes} enabled={Boolean(me)} label={t.data.title} />
               <div className="min-w-0">
                 <Link to={`/thread/${t.recordId}`} className="font-semibold hover:underline">{t.data.title}</Link>
-                {t.data.text && <p className="line-clamp-2 text-sm text-muted-foreground">{t.data.text}</p>}
+                {t.data.text && <p className="font-post line-clamp-2 text-sm text-muted-foreground">{t.data.text}</p>}
                 <p className="mt-1 text-xs text-muted-foreground">
                   by{' '}
-                  {author ? <Link to={`/u/${author.username}`} className="hover:underline">@{author.username}</Link> : `@${t.data.authorName ?? 'unknown'}`}
+                  <ForumAuthor createdBy={t.createdBy} botName={t.data.botName} fallbackName={t.data.authorName} profiles={profiles} />
                   {' · '}{timeAgo(t.createdAt)}{' · '}
                   <Link to={`/thread/${t.recordId}`} className="hover:underline">{n} {n === 1 ? 'comment' : 'comments'}</Link>
                 </p>

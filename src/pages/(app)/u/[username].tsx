@@ -17,7 +17,7 @@ export default function UserPage() {
   const { username = '' } = useParams()
   const [tab, setTab] = useState<'posts' | 'replies' | 'likes'>('posts')
   const profiles = useProfiles()
-  const feed = useFeedData(500)
+  const feed = useFeedData()
   const { profile: me } = useMyProfile()
   const { userId } = useAuth()
   const { user } = useUser()
@@ -62,22 +62,17 @@ export default function UserPage() {
   const tabs = (['posts', 'replies', ...(isMe ? ['likes'] : [])] as const) as readonly ('posts' | 'replies' | 'likes')[]
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-border bg-background/85 px-4 py-2 backdrop-blur">
-        <Link to="/home" aria-label="Back to Home" className="rounded-full p-2 hover:bg-accent">
-          <ArrowLeft className="h-5 w-5" aria-hidden />
-        </Link>
-        <div>
-          <h1 className="font-bold leading-tight">{person.displayName || person.username}</h1>
-          <p className="text-sm text-muted-foreground">{postCount} posts</p>
-        </div>
-      </header>
+    <div className="mx-auto max-w-[680px] space-y-3 px-4 py-5">
+      <Link to="/home" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Back to the feed
+      </Link>
 
-      <section className="border-b border-border">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="h-32 sm:h-40" style={{ background: `radial-gradient(120% 140% at 85% 0%, ${accent} 0%, transparent 60%), linear-gradient(180deg, ${PLANET_COLORS[home]}33, transparent)` }} />
         <div className="px-4 pb-4">
           <div className="-mt-12 flex items-end justify-between gap-2">
-            <span className="rounded-full bg-background p-1">
+            <span className="rounded-full bg-card p-1">
               <UserAvatar name={person.username} avatarKey={person.avatarKey} accent={accent} size={96} />
             </span>
             {isMe ? (
@@ -88,9 +83,9 @@ export default function UserPage() {
               </Link>
             )}
           </div>
-          <h2 className="mt-3 font-display text-xl font-bold">{person.displayName || person.username}</h2>
+          <h1 className="mt-3 font-display text-3xl">{person.displayName || person.username}</h1>
           <p className="text-muted-foreground">@{person.username}</p>
-          {person.bio && <p className="mt-3 whitespace-pre-wrap">{person.bio}</p>}
+          {person.bio && <p className="font-post mt-3 whitespace-pre-wrap text-[1.05rem]">{person.bio}</p>}
           <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ background: PLANET_COLORS[home] }} />
@@ -107,7 +102,7 @@ export default function UserPage() {
           </p>
         </div>
 
-        <nav role="tablist" aria-label="Profile sections" className="flex">
+        <nav role="tablist" aria-label="Profile sections" className="flex border-t border-border">
           {tabs.map((t) => (
             <button
               key={t}
@@ -125,7 +120,7 @@ export default function UserPage() {
       </section>
 
       {items.length === 0 && (
-        <p className="px-4 py-10 text-center text-muted-foreground">
+        <p className="rounded-2xl border border-dashed border-border py-10 text-center text-muted-foreground">
           {tab === 'posts' ? (isMe ? 'You haven\'t posted yet.' : 'No posts yet.') : tab === 'replies' ? 'No replies yet.' : 'Posts you like show up here.'}
         </p>
       )}

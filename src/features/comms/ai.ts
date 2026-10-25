@@ -5,7 +5,8 @@ import { createDeepSpaceAI } from 'deepspace/worker'
 import { generateText } from 'ai'
 import type { Env } from '../../../worker'
 import { BODY_LABELS, formatDelay, lightDelaySeconds } from '../../lib/space'
-import { pickPersona, scriptedLine, toBotPost, type BotPost } from './bots'
+import { pickPersona, scriptedLine, toBotPost, type BotPost, type Persona } from './bots'
+import type { Colonist } from '../forums/colonists'
 import type { Operator } from '../social/operators'
 
 const MODEL = 'claude-haiku-5-5' // fast and cheap: good for short in-character posts
@@ -96,6 +97,96 @@ export async function generateOperatorReply(
     return reply || null
   } catch (err) {
     console.error(`[ai] operator reply failed: ${describeError(err)}`)
+    return null
+  }
+}
+
+// ---- Liveliness: bot replies to people's posts, and bot colonists chatting in the forums ----
+
+/** A feed bot's short, in-character reply to a colonist's post. Returns null if the AI call fails. */
+export async function generateBotReply(
+  env: Env,
+  persona: Persona,
+  post: { authorName: string; text: string },
+  now: number = Date.now(),
+): Promise<string | null> {
+  try {
+    const ai = createDeepSpaceAI(env, 'anthropic')
+    const { text } = await generateText({
+      model: ai(MODEL),
+      maxOutputTokens: MAX_TOKENS,
+      system:
+        `You are ${persona.name}, ${persona.voice}. You are replying to a colonist's post on a social feed used by ` +
+        'humans living off Earth. Write ONE friendly reply under 200 characters, in character, that responds to what ' +
+        'they actually said. No hashtags, no emoji, no quotation marks. Suitable for all ages. Real facts you can use:\n' +
+        factSheet(now),
+      prompt: `@${post.authorName} posted: ${post.text}`,
+    })
+    return clean(text, 280) || null
+  } catch (err) {
+    console.error(`[ai] bot reply failed: ${describeError(err)}`)
+    return null
+  }
+}
+
+/** A new forum thread from a bot colonist: { title, text }. Returns null if the AI call fails. */
+export async function generateForumThread(
+  env: Env,
+  colonist: Colonist,
+  forum: { name: string; tagline: string },
+  now: number = Date.now(),
+): Promise<{ title: string; text: string } | null> {
+  try {
+    const ai = createDeepSpaceAI(env, 'anthropic')
+    const { text } = await generateText({
+      model: ai(MODEL),
+      maxOutputTokens: MAX_TOKENS,
+      system:
+        `You are ${colonist.name} (@${colonist.handle}), ${colonist.voice}. You live at ${colonist.home}. ` +
+        `You are starting a new thread in the forum ${forum.name} ("${forum.tagline}"). ` +
+        'Write casual, specific, everyday colonist chatter: a question, a story, a tip, or a small complaint. ' +
+        'Reply with exactly two lines: the first line is the title (under 80 characters), the second line is the post ' +
+        '(under 300 characters). No emoji, no hashtags, no labels like "Title:". Suitable for all ages. Real facts:\n' +
+        factSheet(now),
+      prompt: 'Write your new thread.',
+    })
+    const [title, ...rest] = text.trim().split('\n').map((l) => l.trim()).filter(Boolean)
+    const body = rest.join(' ')
+    if (!title) return null
+    return { title: clean(title.replace(/^title:\s*/i, ''), 120), text: clean(body.replace(/^(post|body):\s*/i, ''), 600) }
+  } catch (err) {
+    console.error(`[ai] forum thread failed: ${describeError(err)}`)
+    return null
+  }
+}
+
+/** A bot colonist's comment on a forum thread, aware of the thread and its latest comments. */
+export async function generateForumComment(
+  env: Env,
+  colonist: Colonist,
+  forum: { name: string },
+  thread: { title: string; text?: string },
+  recent: { author: string; text: string }[],
+  now: number = Date.now(),
+): Promise<string | null> {
+  try {
+    const transcript = recent.map((c) => `@${c.author}: ${c.text.slice(0, 300)}`).join('\n')
+    const ai = createDeepSpaceAI(env, 'anthropic')
+    const { text } = await generateText({
+      model: ai(MODEL),
+      maxOutputTokens: MAX_TOKENS,
+      system:
+        `You are ${colonist.name} (@${colonist.handle}), ${colonist.voice}. You live at ${colonist.home}. ` +
+        `You are commenting on a thread in the forum ${forum.name}. Write ONE casual comment under 250 characters that ` +
+        'adds to the conversation (answer, joke, story, or follow-up question). No emoji, no hashtags, no quotation ' +
+        'marks. Suitable for all ages. Real facts you can use:\n' + factSheet(now),
+      prompt:
+        `Thread title: ${thread.title}\n${thread.text ? `Thread post: ${thread.text.slice(0, 500)}\n` : ''}` +
+        (transcript ? `Latest comments, oldest first:\n${transcript}\n` : '') + 'Write your comment.',
+    })
+    return clean(text, 400) || null
+  } catch (err) {
+    console.error(`[ai] forum comment failed: ${describeError(err)}`)
     return null
   }
 }

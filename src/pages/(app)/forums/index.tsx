@@ -1,13 +1,43 @@
 // "/forums" — every board, grouped (home worlds, outer colonies, lounges), plus the top threads right now.
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from 'deepspace'
+import { getAuthToken, useQuery, useUser } from 'deepspace'
 import { CATEGORY_LABELS, FORUMS, findForum, useVotes, type ForumCategory, type Thread } from '../../../features/forums/forums'
 
 const CATEGORIES: ForumCategory[] = ['worlds', 'colonies', 'lounges']
 
+/** Admin-only: fill every forum with starter conversations from the bot colonists (no AI credits). */
+function SeedButton() {
+  const [state, setState] = useState<'idle' | 'working' | string>('idle')
+  async function seed() {
+    setState('working')
+    try {
+      const res = await fetch('/api/actions/seedForums', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await getAuthToken()}` },
+        body: '{}',
+      })
+      const result = (await res.json()) as { success: boolean; error?: string; data?: { threads: number; comments: number } }
+      setState(result.success ? `Added ${result.data?.threads ?? 0} threads and ${result.data?.comments ?? 0} comments.` : `Could not seed: ${result.error}`)
+    } catch (err) {
+      setState('Could not seed: ' + (err instanceof Error ? err.message : String(err)))
+    }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-sm">
+      <button type="button" onClick={seed} disabled={state === 'working'} className="rounded-full border border-border px-4 py-1.5 font-bold hover:bg-accent disabled:opacity-50">
+        {state === 'working' ? 'Seeding...' : 'Seed the forums'}
+      </button>
+      {state !== 'idle' && state !== 'working' && <span className="text-muted-foreground">{state}</span>}
+    </div>
+  )
+}
+
 export default function ForumsPage() {
   const { records } = useQuery<Thread>('threads', { orderBy: 'createdAt', orderDir: 'desc', limit: 2000 })
   const votes = useVotes()
+  const { user } = useUser()
+  const isAdmin = user?.role === 'admin' || user?.isAdmin === true
 
   // One pass: thread count and latest activity per forum.
   const counts = new Map<string, number>()
@@ -21,15 +51,18 @@ export default function ForumsPage() {
     .slice(0, 5)
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <header className="sticky top-0 z-10 border-b border-border bg-background/85 px-4 py-3 backdrop-blur">
-        <h1 className="font-display text-xl font-bold">Forums</h1>
-        <p className="text-sm text-muted-foreground">Longer conversations, one board per world and topic.</p>
+    <div className="mx-auto max-w-3xl px-4 py-5">
+      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
+        <div>
+          <h1 className="font-display text-3xl leading-none">Forums</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Longer conversations, one board per world and topic.</p>
+        </div>
+        {isAdmin && <SeedButton />}
       </header>
 
       {trending.length > 0 && (
-        <section className="border-b border-border px-4 py-4">
-          <h2 className="mb-2 font-bold">Trending threads</h2>
+        <section className="border-b border-border py-5">
+          <h2 className="mb-2 font-display text-xl">Trending threads</h2>
           <ol className="space-y-2">
             {trending.map((t) => {
               const f = findForum(t.data.forum)
@@ -50,8 +83,8 @@ export default function ForumsPage() {
       )}
 
       {CATEGORIES.map((c) => (
-        <section key={c} className="border-b border-border px-4 py-4">
-          <h2 className="font-bold">{CATEGORY_LABELS[c].title}</h2>
+        <section key={c} className="border-b border-border py-5">
+          <h2 className="font-display text-xl">{CATEGORY_LABELS[c].title}</h2>
           <p className="mb-3 text-sm text-muted-foreground">{CATEGORY_LABELS[c].blurb}</p>
           <ul className="grid gap-1 sm:grid-cols-2">
             {FORUMS.filter((f) => f.category === c).map((f) => {

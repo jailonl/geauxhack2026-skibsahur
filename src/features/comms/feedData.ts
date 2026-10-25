@@ -1,12 +1,12 @@
-// Loads posts + likes/reposts once and derives everything the feed needs: counts, who liked what,
-// quoted posts, and reply counts. One query per collection, shared by every card on the page.
-import { useMemo } from 'react'
+// Posts + likes/reposts, loaded ONCE for the whole app by <SocialProvider> and shared through context,
+// with everything the feed needs derived from them: counts, who liked what, quoted posts, and replies.
+import { createContext, useContext, useMemo } from 'react'
 import { useAuth, useMutations, useQuery } from 'deepspace'
 import type { Profiles } from '../social/profiles'
 import type { Post, PostRecord } from './types'
 
 export type Reaction = { targetId: string; kind: 'like' | 'repost'; userId?: string }
-type ReactionRecord = { recordId: string; data: Reaction; createdBy: string; createdAt: string }
+export type ReactionRecord = { recordId: string; data: Reaction; createdBy: string; createdAt: string }
 
 export type PostStats = {
   replies: number
@@ -18,9 +18,12 @@ export type PostStats = {
 
 const EMPTY_STATS: PostStats = { replies: 0, likes: 0, reposts: 0, myLikeId: null, myRepostId: null }
 
-export function useFeedData(limit = 150) {
+const FEED_LIMIT = 300
+
+/** The one live subscription to posts and reactions. Only <SocialProvider> calls this. */
+export function useFeedQuery() {
   const { userId } = useAuth()
-  const posts = useQuery<Post>('posts', { orderBy: 'createdAt', orderDir: 'desc', limit })
+  const posts = useQuery<Post>('posts', { orderBy: 'createdAt', orderDir: 'desc', limit: FEED_LIMIT })
   const reactions = useQuery<Reaction>('reactions', { orderBy: 'createdAt', orderDir: 'desc', limit: 2000 })
 
   return useMemo(() => {
@@ -58,6 +61,7 @@ export function useFeedData(limit = 150) {
 
     return {
       posts: postRecords,
+      reactionRecords,
       reposts: reactionRecords.filter((r) => r.data.kind === 'repost'),
       byId,
       repliesTo: (id: string) => replies.get(id) ?? [],
@@ -68,7 +72,16 @@ export function useFeedData(limit = 150) {
   }, [posts.records, posts.status, posts.error, reactions.records, reactions.status, reactions.error, userId])
 }
 
-export type FeedData = ReturnType<typeof useFeedData>
+export type FeedData = ReturnType<typeof useFeedQuery>
+
+export const FeedContext = createContext<FeedData | null>(null)
+
+/** Shared posts, reactions, counts, and replies (from <SocialProvider>). */
+export function useFeedData(): FeedData {
+  const feed = useContext(FeedContext)
+  if (!feed) throw new Error('useFeedData must be used inside <SocialProvider>')
+  return feed
+}
 
 /** Like/repost toggles: create the reaction, or delete mine if it's already there. */
 export function useReactionActions() {

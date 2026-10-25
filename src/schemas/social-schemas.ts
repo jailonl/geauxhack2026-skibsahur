@@ -15,6 +15,8 @@ export const threadsSchema: CollectionSchema = {
     { name: 'title', storage: 'text', interpretation: 'plain', required: true },
     { name: 'text', storage: 'text', interpretation: 'plain' },
     { name: 'authorName', storage: 'text', interpretation: 'plain' },
+    // Set only by the server for bot colonists (their handle). Users can't set it, so nobody can pose as a bot.
+    { name: 'botName', storage: 'text', interpretation: 'plain' },
   ],
   permissions: {
     '*': { read: true, create: false, update: false, delete: false },
@@ -31,6 +33,7 @@ export const commentsSchema: CollectionSchema = {
     { name: 'parentId', storage: 'text', interpretation: 'plain' }, // set when replying to another comment
     { name: 'text', storage: 'text', interpretation: 'plain', required: true },
     { name: 'authorName', storage: 'text', interpretation: 'plain' },
+    { name: 'botName', storage: 'text', interpretation: 'plain' }, // bot colonist handle, server-only
   ],
   permissions: {
     '*': { read: true, create: false, update: false, delete: false },

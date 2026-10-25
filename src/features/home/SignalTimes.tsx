@@ -29,7 +29,7 @@ export default function SignalTimes({ home }: { home: Body }) {
 
   return (
     <section aria-labelledby="signal-times" className="rounded-2xl border border-border bg-card p-4">
-      <h2 id="signal-times" className="flex items-center gap-2 font-display text-base font-bold">
+      <h2 id="signal-times" className="flex items-center gap-2 font-display text-lg">
         <span aria-hidden className="signal-pulse h-2 w-2 rounded-full bg-primary" />
         Signal times
       </h2>

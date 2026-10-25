@@ -11,7 +11,7 @@ import { useMyProfile, useProfiles } from '../../../features/social/profiles'
 export default function PostPage() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
-  const feed = useFeedData(500)
+  const feed = useFeedData()
   const profiles = useProfiles()
   const { profile: me } = useMyProfile()
   const { userId } = useAuth()
@@ -46,12 +46,12 @@ export default function PostPage() {
   )
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-border bg-background/85 px-4 py-2 backdrop-blur">
-        <button type="button" onClick={() => navigate(-1)} aria-label="Back" className="rounded-full p-2 hover:bg-accent">
+    <div className="mx-auto max-w-[680px] space-y-3 px-4 py-5">
+      <header className="flex items-center gap-3">
+        <button type="button" onClick={() => navigate(-1)} aria-label="Back" className="rounded-full border border-border p-2 hover:bg-accent">
           <ArrowLeft className="h-5 w-5" aria-hidden />
         </button>
-        <h1 className="font-display text-lg font-bold">Thread</h1>
+        <h1 className="font-display text-2xl">Thread</h1>
       </header>
 
       {feed.status === 'loading' && <p className="px-4 py-6 text-muted-foreground">Loading...</p>}
@@ -66,11 +66,10 @@ export default function PostPage() {
         <>
           {parent && card(parent)}
           {card(post, true)}
-          <div className="border-b border-border px-4 py-3">
-            <PostComposer replyToId={post.recordId} bare />
-          </div>
+          <PostComposer replyToId={post.recordId} />
+          <h2 className="pt-2 text-lg font-bold">{replies.length} {replies.length === 1 ? 'reply' : 'replies'}</h2>
           {replies.length === 0 ? (
-            <p className="px-4 py-8 text-center text-muted-foreground">No replies yet. Start the conversation.</p>
+            <p className="rounded-2xl border border-dashed border-border py-8 text-center text-muted-foreground">No replies yet. Start the conversation.</p>
           ) : (
             replies.map((r) => card(r))
           )}

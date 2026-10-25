@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--
+  Active theme is set on the <html> element below.
+  To switch themes, change `data-theme` to any id defined in src/themes.ts.
+  Color values per theme live in src/themes.css.
+-->
+<html lang="en" data-theme="nightside">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>Colony · the social network beyond Earth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400&display=swap"
+      rel="stylesheet"
+    />
+    <!--
+      First-paint background, keyed to the data-theme attribute above.
+      Without this the browser paints white until the CSS bundle arrives —
+      a hard flash on the dark themes. Each value mirrors --color-background
+      in src/styles.css (slate) / src/themes.css; keep them in sync when
+      adding or editing themes.
+    -->
+    <style>
+      html { background-color: #0a0a0a; color-scheme: dark; }
+      html[data-theme="paper"] { background-color: #ffffff; color-scheme: light; }
+      html[data-theme="nightside"] { background-color: #10132b; color-scheme: dark; }
+      html[data-theme="dayside"] { background-color: #f3f1fa; color-scheme: light; }
+      /* Add one line per theme you create, mirroring its --color-background. */
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
