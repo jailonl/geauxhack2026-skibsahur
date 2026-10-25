@@ -4,9 +4,11 @@ import { useState } from 'react'
 import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
 import type { MapBody, PointOfInterest } from '../../features/map/types'
 import { findForum } from '../../features/forums/forums'
-import { MAP_BODIES } from '../../features/map/poi-logic'
+import { MAP_BODIES, isOnMap } from '../../features/map/poi-logic'
 import MapView, { TREK } from '../../features/map/MapView'
 import PoiForm from '../../features/map/PoiForm'
+import { useSearchParams } from 'react-router-dom'
+
 
 const BODY_LABELS: Record<string, string> = {
   moon: 'Moon',
@@ -19,8 +21,16 @@ const BODY_LABELS: Record<string, string> = {
 }
 
 export default function MapPage() {
-  const [body, setBody] = useState<MapBody>('mars')
-  const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(null)
+  const [params] = useSearchParams()
+  const linkBody = params.get('body') as MapBody
+  const linkLat = Number(params.get('lat'))
+  const linkLng = Number(params.get('lng'))
+  const fromLink = MAP_BODIES.includes(linkBody) && params.has('lat') && params.has('lng') && isOnMap(linkLat, linkLng)
+
+  const [body, setBody] = useState<MapBody>(fromLink ? linkBody : 'mars')
+  const [picked, setPicked] = useState<{ lat: number; lng: number } | null>(
+    fromLink ? { lat: linkLat, lng: linkLng } : null,
+  )
 
   // Live: new POIs from anyone show up without a refresh.
   const { records, status, error } = useQuery<PointOfInterest>('pois', { where: { body } })

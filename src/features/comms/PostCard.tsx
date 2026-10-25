@@ -186,7 +186,7 @@ export default function PostCard(props: Props) {
         {d.body && d.lat != null && d.lng != null && (
           <p className="mt-2 text-sm text-muted-foreground">
             Tagged at {d.lat.toFixed(2)}, {d.lng.toFixed(2)} on {BODY_LABELS[d.body]}.{' '}
-            <Link to="/map" className="text-primary hover:underline">Open map</Link>
+            <Link to={`/map?body=${d.body}&lat=${d.lat}&lng=${d.lng}`} className="text-primary hover:underline">Open map</Link>
           </p>
         )}
 
