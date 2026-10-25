@@ -49,7 +49,7 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Transmission cards:** every post shows which world it came from and how long its signal took to reach you.
 - **Notifications:** a bell with an unread count for likes, reposts, quotes, replies, direct messages, and forum replies.
 - **Search:** colonists, posts, forums, and threads.
-- **Vitals:** personal health and supply readings with color-coded warnings
+- **Vitals:** a private page (only you can read your readings) for heart rate, blood oxygen, blood pressure, body temperature, daily and mission radiation dose, and oxygen/water/food supplies. Each reading gets an OK / Watch / Danger label at real medical and NASA limits, with the reason in words, a trend line, and a history table. A "Read sensors" button fills in a believable reading for your home world (Moon, Mars, station, or Earth radiation levels) so the demo works without real hardware.
 - **Accessibility:** a "Readable font" setting (Atkinson Hyperlegible, designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
 
 ### Tech stack
@@ -135,7 +135,19 @@ No AI was used to generate any image or video assets. The app contains no drawn 
 | `src/components/AppShell.tsx`, `forums/index.tsx`, `forums/[body].tsx`, `SocialProvider.tsx` (updates) | Removed the Colony pulse block, hid empty forums and guest-only links, and shared forum data instead of separate large downloads |
 | `src/pages/(app)/_layout.tsx`, `Navigation.tsx`, `SignIn.tsx`, `ComposeDialog.tsx`, `index.tsx` (performance) | Phone-safe screen height, removed blur effects that slow down weak devices, smaller title on small screens |
 
-**Code (Vitals):** _list AI-assisted files, or write "No AI used."_
+**Code (Vitals, Brandon Richard):**
+
+| File | What AI did |
+| --- | --- |
+| `src/schemas/vitals-schema.ts` | Generated the private vitals collection schema (owner-only reads, admins included) |
+| `src/features/vitals/types.ts` | Generated the Vitals reading type |
+| `src/features/vitals/limits.ts` | Generated the safety limits, the OK/Watch/Danger checks, form validation, and the mission radiation total (latest reading per day) |
+| `src/features/vitals/simulate.ts` | Generated the "Read sensors" demo reading for each home world |
+| `src/features/vitals/limits.test.ts` | Generated unit tests for the limits, mission dose, validation, and simulator |
+| `src/features/vitals/VitalCard.tsx` | Generated the vital card with level badge, reason, trend line, and time |
+| `src/features/vitals/VitalsForm.tsx` | Generated the "Log a reading" form |
+| `src/pages/(app)/(protected)/vitals.tsx` | Generated the Vitals page: status banner, cards, form, history, and safety-limits table |
+| `src/nav.ts`, `src/components/AppShell.tsx`, `src/components/Navigation.tsx` | Added the Vitals link, breadcrumb, and icon (phone tab bar now has 5 tabs) |
 
 **Code (Points of interest, Jailon Living):**
 
@@ -186,6 +198,8 @@ Photo and video uploads only work after the app has been deployed once (`npx dee
 **POI map terrain:** NASA Solar System Treks (trek.nasa.gov). Moon: LRO WAC mosaic (NASA/GSFC/Arizona State University). Mars: Viking MDIM 2.1 (NASA/JPL/USGS). Europa and Ganymede: Voyager and Galileo SSI mosaics (NASA/JPL/USGS). Titan: Cassini ISS mosaic (NASA/JPL/Space Science Institute). Ceres: Dawn Framing Camera mosaic (NASA/JPL/DLR). NASA imagery is public domain.
 
 **How the aliens work (no AI):** each species has its own list of sounds. To write a word in an alien language, we hash the English word together with the species name (FNV-1a) and use that number to seed a small random generator (Mulberry32), which picks the syllables. The same word always becomes the same alien word, so each language is consistent. The English sentences come from a fill-in-the-blank grammar: a template like "Ate #dish# for #meal#. #rating#" has each #word# replaced with a random choice from that word's list. Time is cut into 3-second slots, and each slot's random choices are seeded by the slot number, so every viewer sees the same aliens say the same things at the same time without saving anything. Signal delays use the same orbital math as the rest of the app.
+
+**Vitals safety limits:** resting heart rate 60–100 bpm is normal (American Heart Association); we flag under 50 or over 100, and danger under 40 or over 130. Blood oxygen under 95% is low and under 90% is hypoxemia. Blood pressure follows the 2017 ACC/AHA guideline (130/80 is high, over 180/120 is a crisis) plus under 90/60 for low pressure. Body temperature: 38.0 °C fever, 40.0 °C heat stroke, under 35.0 °C hypothermia. Radiation: Curiosity's RAD measured about 1.84 mSv/day in deep space and 0.64 mSv/day on the Mars surface, and China's Chang'e 4 lander measured about 1.37 mSv/day on the Moon; over 8.3 mSv in a day is the pace of NASA's old 30-day limit (250 mSv), and NASA's career limit is 600 mSv (NASA-STD-3001). Supplies (under 30 days, under 7 days) are our own colony rule, not a medical limit. This is a hackathon demo, not medical advice.
 
 **Fonts** (all free under the SIL Open Font License, served by Google Fonts): Pixelify Sans by Stefie Justprince, Silkscreen by Jason Kottke, VT323 by Peter Hull, and Atkinson Hyperlegible by the Braille Institute (the "Readable font" setting). Icons are from Lucide (ISC license), included with the DeepSpace starter.
 

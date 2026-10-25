@@ -24,5 +24,6 @@ export const nav: NavItem[] = [
   { path: '/forums', label: 'Forums' },
   { path: '/messages', label: 'Messages' },
   { path: '/map', label: 'Map' },
+  { path: '/vitals', label: 'Vitals' },
   { path: '/settings', label: 'Admin', roles: ['admin'] },
 ]

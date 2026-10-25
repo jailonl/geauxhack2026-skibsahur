@@ -23,6 +23,7 @@ const LINKS = [
   { to: '/forums', label: 'Forums' },
   { to: '/messages', label: 'Messages' },
   { to: '/map', label: 'Map' },
+  { to: '/vitals', label: 'Vitals' },
   { to: '/notifications', label: 'Notifications' },
   { to: '/search', label: 'Search' },
   { to: '/preferences', label: 'Settings' },
@@ -147,7 +148,7 @@ function Breadcrumbs({ pathname }: { pathname: string }) {
   else {
     const named: Record<string, string> = {
       messages: 'Messages', notifications: 'Notifications', search: 'Search', preferences: 'Settings',
-      profile: 'Edit profile', map: 'Map', settings: 'Admin',
+      profile: 'Edit profile', map: 'Map', vitals: 'Vitals', settings: 'Admin',
     }
     if (first && named[first]) crumbs.push({ label: named[first] })
   }

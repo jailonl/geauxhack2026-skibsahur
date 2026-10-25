@@ -15,6 +15,7 @@ import { profilesSchema } from './schemas/profiles-schema'
 import { dmsSchema } from './schemas/dms-schema'
 import { commentsSchema, reactionsSchema, threadsSchema, votesSchema } from './schemas/social-schemas'
 import { poiSchema } from './schemas/poi-schema'
+import { vitalsSchema } from './schemas/vitals-schema'
 
 export const schemas: CollectionSchema[] = [
   usersSchema,
@@ -27,4 +28,5 @@ export const schemas: CollectionSchema[] = [
   commentsSchema,
   votesSchema,
   poiSchema,
+  vitalsSchema,
 ]

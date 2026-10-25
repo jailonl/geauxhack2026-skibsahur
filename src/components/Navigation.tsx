@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthProfileReady, signOut } from 'deepspace'
-import { Bell, House, LogOut, Mail, Map as MapIcon, MessagesSquare, Pencil, Plus, Search, Settings, Shield, User } from 'lucide-react'
+import { Bell, HeartPulse, House, LogOut, Mail, Map as MapIcon, MessagesSquare, Pencil, Plus, Search, Settings, Shield, User } from 'lucide-react'
 import type { Role } from '../constants'
 import { nav } from '../nav'
 import { cn } from '../lib/utils'
@@ -34,6 +34,7 @@ const ICONS: Record<string, typeof House> = {
   '/forums': MessagesSquare,
   '/messages': Mail,
   '/map': MapIcon,
+  '/vitals': HeartPulse,
   '/settings': Shield,
 }
 
@@ -215,9 +216,9 @@ export default function Navigation() {
       {/* Phone bottom tab bar */}
       <nav
         aria-label="Sections"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
       >
-        {visibleNav.filter((i) => !i.roles).slice(0, 4).map((item) => {
+        {visibleNav.filter((i) => !i.roles).slice(0, 5).map((item) => {
           const Icon = ICONS[item.path] ?? House
           const active = isActive(item.path)
           return (
