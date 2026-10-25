@@ -115,6 +115,16 @@ export default function PreferencesPage() {
 
       <Section title="Feed">
         <Toggle label="Show bot posts" hint="Habitat computers, rovers, relays, and unexplained signals." checked={s.showBots} onChange={(showBots) => set({ showBots })} />
+        <Choice
+          label="Alien chatter"
+          value={s.alienChatter}
+          onChange={(alienChatter) => set({ alienChatter })}
+          options={[
+            { value: 'lively', label: 'Lively (every few seconds)' },
+            { value: 'calm', label: 'Calm' },
+            { value: 'off', label: 'Off' },
+          ]}
+        />
         <Toggle
           label="Bandwidth saver"
           hint="Photos and videos load only when you tap them. Useful on a slow Mars link."

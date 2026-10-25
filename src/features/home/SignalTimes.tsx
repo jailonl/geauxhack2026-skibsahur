@@ -1,6 +1,7 @@
 // "Signal times": how long a message from your home world takes to reach every colony, right now.
 // Planet positions move, so the Mars/Jupiter/Saturn numbers change from day to day.
 import { useEffect, useState } from 'react'
+import Block from '../../components/Block'
 import {
   BODY_LABELS, PLANET_COLORS, PROXIMA_SECONDS, earthToOuterPlanetSeconds, formatLongDelay, lightDelaySeconds, type Body,
 } from '../../lib/space'
@@ -28,26 +29,30 @@ export default function SignalTimes({ home }: { home: Body }) {
   }, [])
 
   return (
-    <section aria-labelledby="signal-times" className="rounded-2xl border border-border bg-card p-4">
-      <h2 id="signal-times" className="flex items-center gap-2 font-display text-lg">
-        <span aria-hidden className="signal-pulse h-2 w-2 rounded-full bg-primary" />
-        Signal times
-      </h2>
+    <Block
+      id="signal-times"
+      title={
+        <>
+          <span aria-hidden className="signal-pulse h-2 w-2 bg-primary" />
+          Signal times
+        </>
+      }
+    >
       <p className="mb-3 text-sm text-muted-foreground">
         One-way light delay from <span style={{ color: PLANET_COLORS[home] }}>{BODY_LABELS[home]}</span>, right now.
       </p>
-      <ul className="space-y-2.5">
+      <ul className="space-y-2">
         {rowsFrom(home, now).map((r) => (
-          <li key={r.name} className="flex items-center gap-3">
-            <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.color }} />
+          <li key={r.name} className="flex items-center gap-2.5">
+            <span aria-hidden className="h-2.5 w-2.5 shrink-0" style={{ background: r.color }} />
             <span className="min-w-0 flex-1">
               <span className="block leading-tight">{r.name}</span>
               <span className="block text-xs text-muted-foreground">{r.where}</span>
             </span>
-            <span className="font-bold tabular-nums">{formatLongDelay(r.seconds)}</span>
+            <span className="font-signal tabular-nums text-primary">{formatLongDelay(r.seconds)}</span>
           </li>
         ))}
       </ul>
-    </section>
+    </Block>
   )
 }

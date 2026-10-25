@@ -1,4 +1,5 @@
-// "/thread/:id" — a forum thread with votes and comments. Comments can be replied to one level deep.
+// "/thread/:id" — a forum discussion laid out like a Moodle forum: the first post in a box with a title bar,
+// then every reply in its own box titled "Re: <title>", indented under the post it answers.
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth, useMutations, useQuery, useUser } from 'deepspace'
@@ -38,63 +39,71 @@ function CommentForm({ threadId, parentId, me, onDone }: { threadId: string; par
         onChange={(e) => setText(e.target.value)}
         rows={parentId ? 2 : 3}
         maxLength={2000}
-        placeholder={parentId ? 'Write a reply...' : 'Add a comment...'}
+        placeholder={parentId ? 'Write a reply...' : 'Reply to this discussion...'}
         className="w-full rounded-md border bg-background p-2"
       />
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex gap-2">
-        <button type="submit" disabled={!ready || !text.trim()} className="rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground disabled:opacity-50">
-          {parentId ? 'Reply' : 'Comment'}
+        <button type="submit" disabled={!ready || !text.trim()} className="bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground disabled:opacity-50">
+          Post reply
         </button>
-        {onDone && <button type="button" onClick={onDone} className="rounded-full border border-border px-4 py-1.5 text-sm">Cancel</button>}
+        {onDone && <button type="button" onClick={onDone} className="border border-border px-4 py-1.5 text-sm">Cancel</button>}
       </div>
     </form>
   )
 }
 
+const MAX_INDENT = 4 // deeper replies stop indenting so text never gets too narrow
+
 function CommentItem(props: {
   c: CommentRecord
-  replies: CommentRecord[]
+  title: string
+  depth: number
+  repliesTo: (id: string) => CommentRecord[]
   profiles: Profiles
   votes: Votes
   me: ProfileRecord | null
   canDelete: (c: CommentRecord) => boolean
   onDelete: (id: string) => void
 }) {
-  const { c, replies, profiles, votes, me, canDelete, onDelete } = props
+  const { c, title, depth, repliesTo, profiles, votes, me, canDelete, onDelete } = props
   const [replying, setReplying] = useState(false)
   const name = c.data.botName ?? profiles.byUserId.get(c.createdBy)?.username ?? c.data.authorName ?? 'unknown'
+  const replies = repliesTo(c.recordId)
 
   return (
-    <li className="flex gap-2">
-      <VoteButtons id={c.recordId} votes={votes} enabled={Boolean(me)} label={`comment by ${name}`} />
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-sm">
-          <ForumAuthor createdBy={c.createdBy} botName={c.data.botName} fallbackName={c.data.authorName} profiles={profiles} withAvatar />
-          <span className="text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
-        </p>
-        <p className="font-post mt-1 whitespace-pre-wrap break-words">{c.data.text}</p>
-        <div className="mt-1 flex gap-3 text-sm text-muted-foreground">
-          {me && !c.data.parentId && (
-            <button type="button" onClick={() => setReplying(!replying)} className="hover:underline">Reply</button>
+    <li>
+      <article className="border border-border bg-card">
+        <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-secondary px-3 py-1.5">
+          <span className="font-display text-xs">Re: {title}</span>
+          <span className="font-signal flex items-center gap-2 text-muted-foreground">
+            by <ForumAuthor createdBy={c.createdBy} botName={c.data.botName} fallbackName={c.data.authorName} profiles={profiles} />
+            · {new Date(c.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          </span>
+        </header>
+        <p className="font-post whitespace-pre-wrap break-words px-3 py-2.5">{c.data.text}</p>
+        <footer className="font-signal flex flex-wrap items-center gap-3 px-3 pb-2 text-primary">
+          <VoteButtons id={c.recordId} votes={votes} enabled={Boolean(me)} label={`reply by ${name}`} horizontal />
+          {me && (
+            <button type="button" onClick={() => setReplying(!replying)} className="hover:underline">[ Reply ]</button>
           )}
           {canDelete(c) && (
-            <button type="button" onClick={() => onDelete(c.recordId)} className="text-destructive hover:underline">Delete</button>
+            <button type="button" onClick={() => onDelete(c.recordId)} className="text-destructive hover:underline">[ Delete ]</button>
           )}
-        </div>
+        </footer>
         {replying && me && (
-          <div className="mt-2">
+          <div className="px-3 pb-3">
             <CommentForm threadId={c.data.threadId} parentId={c.recordId} me={me} onDone={() => setReplying(false)} />
           </div>
         )}
-        {replies.length > 0 && (
-          <ul className="mt-3 space-y-3 border-l pl-3">
-            {replies.map((r) => (
-              <CommentItem key={r.recordId} c={r} replies={[]} profiles={profiles} votes={votes} me={me} canDelete={canDelete} onDelete={onDelete} />
-            ))}
-          </ul>
-        )}
-      </div>
+      </article>
+      {replies.length > 0 && (
+        <ul className={`mt-3 space-y-3 ${depth < MAX_INDENT ? 'ml-4 border-l-2 border-dashed border-border pl-3 sm:ml-6' : ''}`}>
+          {replies.map((r) => (
+            <CommentItem key={r.recordId} {...props} c={r} depth={depth + 1} />
+          ))}
+        </ul>
+      )}
     </li>
   )
 }
@@ -126,7 +135,12 @@ export default function ThreadPage() {
   const forum = findForum(t.data.forum)
   const all = comments.records as CommentRecord[]
   const topLevel = all.filter((c) => !c.data.parentId)
-  const repliesTo = (parentId: string) => all.filter((c) => c.data.parentId === parentId)
+  // Group replies by parent once, instead of searching the whole list for every comment.
+  const byParent = new Map<string, CommentRecord[]>()
+  for (const c of all) {
+    if (c.data.parentId) byParent.set(c.data.parentId, [...(byParent.get(c.data.parentId) ?? []), c])
+  }
+  const repliesTo = (parentId: string) => byParent.get(parentId) ?? []
   const canDelete = (c: { createdBy: string }) => isAdmin || (userId != null && c.createdBy === userId)
 
   async function onDeleteThread() {
@@ -137,40 +151,34 @@ export default function ThreadPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4">
-      {forum && <Link to={`/forums/${forum.slug}`} className="text-sm text-muted-foreground hover:underline">← {forum.name}</Link>}
-
-      <article className="flex gap-3 rounded-xl border border-border bg-card p-4" style={forum ? { borderTop: `4px solid ${forum.accent}` } : undefined}>
-        <VoteButtons id={t.recordId} votes={votes} enabled={Boolean(me)} label={t.data.title} />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">
-            {forum?.name} · posted by{' '}
-            <ForumAuthor createdBy={t.createdBy} botName={t.data.botName} fallbackName={t.data.authorName} profiles={profiles} />
-            {' · '}{new Date(t.createdAt).toLocaleString()}
+    <div className="space-y-4 px-1 py-2">
+      <article className="border border-border bg-card" style={forum ? { borderTop: `4px solid ${forum.accent}` } : undefined}>
+        <header className="bg-secondary px-3 py-2">
+          <h1 className="font-display text-lg leading-snug">{t.data.title}</h1>
+          <p className="font-signal flex flex-wrap items-center gap-x-2 text-muted-foreground">
+            by <ForumAuthor createdBy={t.createdBy} botName={t.data.botName} fallbackName={t.data.authorName} profiles={profiles} withAvatar />
+            · {new Date(t.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            {forum && <> · in <Link to={`/forums/${forum.slug}`} className="hover:underline" style={{ color: forum.accent }}>{forum.name}</Link></>}
           </p>
-          <h1 className="mt-1 font-display text-2xl">{t.data.title}</h1>
-          {t.data.text && <p className="font-post mt-2 whitespace-pre-wrap break-words text-[1.05rem]">{t.data.text}</p>}
+        </header>
+        {t.data.text && <p className="font-post whitespace-pre-wrap break-words px-3 py-3 text-[1.05rem]">{t.data.text}</p>}
+        <footer className="font-signal flex flex-wrap items-center gap-3 px-3 pb-2.5 text-primary">
+          <VoteButtons id={t.recordId} votes={votes} enabled={Boolean(me)} label={t.data.title} horizontal />
+          <span className="text-muted-foreground">{all.length} {all.length === 1 ? 'reply' : 'replies'}</span>
           {canDelete(t) && (
-            <button type="button" onClick={onDeleteThread} className="mt-2 text-sm text-destructive hover:underline">Delete thread</button>
+            <button type="button" onClick={onDeleteThread} className="text-destructive hover:underline">[ Delete thread ]</button>
           )}
-        </div>
+        </footer>
       </article>
 
-      {!isSignedIn ? (
-        <SignInPrompt action="comment and vote" />
-      ) : loading ? null : me ? (
-        <CommentForm threadId={t.recordId} me={me} />
-      ) : (
-        <ProfileEditor existing={null} />
-      )}
-
-      <h2 className="text-lg font-semibold">{all.length} {all.length === 1 ? 'comment' : 'comments'}</h2>
-      <ul className="space-y-4">
+      <ul className="space-y-3">
         {topLevel.map((c) => (
           <CommentItem
             key={c.recordId}
             c={c}
-            replies={repliesTo(c.recordId)}
+            title={t.data.title}
+            depth={1}
+            repliesTo={repliesTo}
             profiles={profiles}
             votes={votes}
             me={me}
@@ -179,6 +187,17 @@ export default function ThreadPage() {
           />
         ))}
       </ul>
+
+      <section aria-label="Reply to this discussion" className="border border-border bg-card p-3">
+        <h2 className="font-display mb-2 text-xs uppercase tracking-wider text-primary">Reply to this discussion</h2>
+        {!isSignedIn ? (
+          <SignInPrompt action="reply and vote" />
+        ) : loading ? null : me ? (
+          <CommentForm threadId={t.recordId} me={me} />
+        ) : (
+          <ProfileEditor existing={null} />
+        )}
+      </section>
     </div>
   )
 }

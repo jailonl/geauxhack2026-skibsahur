@@ -1,9 +1,10 @@
-// "/forums/:body" — one planet's board: thread list (Top or New) and a form to start a thread.
+// "/forums/:body" — one board: a Moodle-style discussion table (Discussion, Started by, Replies, Score,
+// Last post), sortable by Active, Top, or New, and a form to start a thread.
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutations, useQuery } from 'deepspace'
 import ForumAuthor from '../../../features/forums/ForumAuthor'
-import VoteButtons from '../../../features/forums/VoteButtons'
+import { findColonist } from '../../../features/forums/colonists'
 import { FORUMS, findForum, useVotes, type Comment, type Thread } from '../../../features/forums/forums'
 import ProfileEditor from '../../../features/social/ProfileEditor'
 import { useMyProfile, useProfiles } from '../../../features/social/profiles'
@@ -19,7 +20,7 @@ function timeAgo(iso: string): string {
 export default function ForumPage() {
   const { body = '' } = useParams()
   const forum = findForum(body)
-  const [sort, setSort] = useState<'top' | 'new'>('top')
+  const [sort, setSort] = useState<'active' | 'top' | 'new'>('active')
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [text, setText] = useState('')
@@ -46,14 +47,28 @@ export default function ForumPage() {
     )
   }
 
-  // Count comments once (one pass), not once per thread.
+  // One pass over comments: reply count and newest reply per thread (not one pass per thread).
   const counts = new Map<string, number>()
-  for (const c of comments.records) counts.set(c.data.threadId, (counts.get(c.data.threadId) ?? 0) + 1)
-  const commentCount = (threadId: string) => counts.get(threadId) ?? 0
+  const lastReply = new Map<string, { at: string; who: string }>()
+  for (const c of comments.records) {
+    const id = c.data.threadId
+    counts.set(id, (counts.get(id) ?? 0) + 1)
+    const prev = lastReply.get(id)
+    if (!prev || c.createdAt > prev.at) {
+      const who = c.data.botName
+        ? findColonist(c.data.botName)?.name ?? c.data.botName
+        : `@${profiles.byUserId.get(c.createdBy)?.username ?? c.data.authorName ?? 'unknown'}`
+      lastReply.set(id, { at: c.createdAt, who })
+    }
+  }
+  const lastActive = (t: { recordId: string; createdAt: string }) => lastReply.get(t.recordId)?.at ?? t.createdAt
+  const time = (iso: string) => new Date(iso).getTime()
   const list = [...threads.records].sort((a, b) =>
     sort === 'new'
-      ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      : votes.score(b.recordId) - votes.score(a.recordId) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ? time(b.createdAt) - time(a.createdAt)
+      : sort === 'active'
+        ? time(lastActive(b)) - time(lastActive(a))
+        : votes.score(b.recordId) - votes.score(a.recordId) || time(b.createdAt) - time(a.createdAt),
   )
 
   async function onCreate(e: React.FormEvent) {
@@ -71,20 +86,12 @@ export default function ForumPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 px-4 py-5">
-      <header className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="h-24" style={{ background: `radial-gradient(100% 160% at 15% 0%, ${forum.accent}66 0%, transparent 70%)` }} />
-        <div className="-mt-8 flex items-end gap-3 px-4 pb-4">
-          <span
-            aria-hidden
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-background text-2xl font-bold"
-            style={{ color: forum.accent, boxShadow: `inset 0 0 0 2px ${forum.accent}` }}
-          >
-            {forum.glyph}
-          </span>
+    <div className="space-y-4 px-1 py-2">
+      <header className="border border-border bg-card p-4" style={{ borderTop: `4px solid ${forum.accent}` }}>
+        <div className="flex items-start gap-3">
+          <span aria-hidden className="text-3xl leading-none" style={{ color: forum.accent }}>{forum.glyph}</span>
           <div className="min-w-0">
-            <Link to="/forums" className="text-sm text-muted-foreground hover:underline">Forums</Link>
-            <h1 className="font-display text-3xl leading-tight">{forum.name}</h1>
+            <h1 className="font-display text-2xl leading-tight">{forum.name}</h1>
             <p className="text-sm text-muted-foreground">{forum.tagline}</p>
           </div>
         </div>
@@ -92,22 +99,22 @@ export default function ForumPage() {
       <div className="space-y-4">
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div role="group" aria-label="Sort threads" className="flex gap-2">
-          {(['top', 'new'] as const).map((s) => (
+        <div role="group" aria-label="Sort discussions" className="flex gap-2">
+          {(['active', 'top', 'new'] as const).map((s) => (
             <button
               key={s}
               type="button"
               aria-pressed={sort === s}
               onClick={() => setSort(s)}
-              className={sort === s ? 'rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground' : 'rounded-full border border-border px-4 py-1.5 text-sm hover:bg-accent'}
+              className={sort === s ? 'bg-primary px-3 py-1 text-sm font-bold text-primary-foreground' : 'border border-border px-3 py-1 text-sm hover:bg-accent'}
             >
-              {s === 'top' ? 'Top' : 'New'}
+              {s === 'active' ? 'Latest activity' : s === 'top' ? 'Top' : 'Newest'}
             </button>
           ))}
         </div>
         {me && (
-          <button type="button" onClick={() => setShowForm(!showForm)} className="rounded-full bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground">
-            {showForm ? 'Cancel' : 'New thread'}
+          <button type="button" onClick={() => setShowForm(!showForm)} className="bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground">
+            {showForm ? 'Cancel' : '+ Add discussion topic'}
           </button>
         )}
       </div>
@@ -118,7 +125,7 @@ export default function ForumPage() {
         <ProfileEditor existing={null} />
       ) : (
         showForm && (
-          <form onSubmit={onCreate} className="space-y-3 rounded-xl border border-border bg-card p-4">
+          <form onSubmit={onCreate} className="space-y-3 border border-border bg-card p-4">
             <label className="block text-sm">
               Title
               <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className="mt-1 w-full rounded-md border bg-background p-2" />
@@ -138,26 +145,54 @@ export default function ForumPage() {
       {threads.status === 'loading' && <p className="text-muted-foreground">Loading threads...</p>}
       {threads.status === 'ready' && list.length === 0 && <p className="text-muted-foreground">No threads yet. Start the first one.</p>}
 
-      <ul className="space-y-2">
-        {list.map((t) => {
-          const n = commentCount(t.recordId)
-          return (
-            <li key={t.recordId} className="flex gap-3 rounded-xl border border-border bg-card p-3 hover:bg-accent/30">
-              <VoteButtons id={t.recordId} votes={votes} enabled={Boolean(me)} label={t.data.title} />
-              <div className="min-w-0">
-                <Link to={`/thread/${t.recordId}`} className="font-semibold hover:underline">{t.data.title}</Link>
-                {t.data.text && <p className="font-post line-clamp-2 text-sm text-muted-foreground">{t.data.text}</p>}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  by{' '}
-                  <ForumAuthor createdBy={t.createdBy} botName={t.data.botName} fallbackName={t.data.authorName} profiles={profiles} />
-                  {' · '}{timeAgo(t.createdAt)}{' · '}
-                  <Link to={`/thread/${t.recordId}`} className="hover:underline">{n} {n === 1 ? 'comment' : 'comments'}</Link>
-                </p>
-              </div>
-            </li>
-          )
-        })}
-      </ul>
+      {list.length > 0 && (
+        <div className="border border-border bg-card">
+          <table className="w-full table-fixed text-sm">
+            <thead className="bg-secondary">
+              <tr className="font-signal text-left text-base text-primary">
+                <th scope="col" className="px-3 py-1.5 font-normal">Discussion</th>
+                <th scope="col" className="hidden w-32 px-2 py-1.5 font-normal md:table-cell">Started by</th>
+                <th scope="col" className="w-16 px-2 py-1.5 text-center font-normal">Replies</th>
+                <th scope="col" className="hidden w-14 px-2 py-1.5 text-center font-normal sm:table-cell">Score</th>
+                <th scope="col" className="hidden w-36 px-3 py-1.5 font-normal lg:table-cell">Last post</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((t) => {
+                const last = lastReply.get(t.recordId)
+                return (
+                  <tr key={t.recordId} className="border-t border-dashed border-border align-top hover:bg-accent/30">
+                    <td className="px-3 py-2.5">
+                      <Link to={`/thread/${t.recordId}`} className="font-bold text-primary hover:underline">{t.data.title}</Link>
+                      {t.data.text && <p className="font-post line-clamp-1 text-muted-foreground">{t.data.text}</p>}
+                      {/* On small screens the hidden columns' info goes here. */}
+                      <p className="font-signal text-muted-foreground md:hidden">
+                        by <ForumAuthor createdBy={t.createdBy} botName={t.data.botName} fallbackName={t.data.authorName} profiles={profiles} /> · {timeAgo(t.createdAt)}
+                      </p>
+                    </td>
+                    <td className="hidden px-2 py-2.5 md:table-cell">
+                      <ForumAuthor createdBy={t.createdBy} botName={t.data.botName} fallbackName={t.data.authorName} profiles={profiles} />
+                      <span className="font-signal block text-muted-foreground">{timeAgo(t.createdAt)}</span>
+                    </td>
+                    <td className="font-signal px-2 py-2.5 text-center text-base">{counts.get(t.recordId) ?? 0}</td>
+                    <td className="font-signal hidden px-2 py-2.5 text-center text-base sm:table-cell">{votes.score(t.recordId)}</td>
+                    <td className="hidden px-3 py-2.5 lg:table-cell">
+                      {last ? (
+                        <>
+                          <span className="block truncate">{last.who}</span>
+                          <span className="font-signal block text-muted-foreground">{timeAgo(last.at)}</span>
+                        </>
+                      ) : (
+                        <span className="font-signal text-muted-foreground">No replies</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       </div>
     </div>
   )

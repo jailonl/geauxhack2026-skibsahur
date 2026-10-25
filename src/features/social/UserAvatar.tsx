@@ -1,4 +1,4 @@
-// Round profile picture with the person's accent color as a ring. Falls back to their initial.
+// Square (pixel-style) profile picture with the person's accent color as a frame. Falls back to their initial.
 import { useR2Files } from 'deepspace'
 import { DEFAULT_ACCENT } from './profiles'
 
