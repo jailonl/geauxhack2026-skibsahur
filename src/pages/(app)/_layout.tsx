@@ -19,6 +19,7 @@ import { Suspense, type ReactNode } from 'react'
 import { Outlet } from 'react-router-dom'
 import { DeepSpaceAuthProvider, useAuthStatus } from 'deepspace'
 import { RecordProvider, RecordScope, AgentTools } from 'deepspace'
+import AppShell from '../../components/AppShell'
 import Navigation from '../../components/Navigation'
 import SocialProvider from '../../features/social/SocialProvider'
 import { useToast } from '@/components/ui'
@@ -37,9 +38,11 @@ export default function AppLayout() {
           <Navigation />
           {/* pb-24 leaves room for the phone tab bar and floating Post button */}
           <main className="min-h-0 flex-1 overflow-y-auto pb-24 md:pb-8">
-            <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">Loading...</div>}>
-              <Outlet />
-            </Suspense>
+            <AppShell>
+              <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">Loading...</div>}>
+                <Outlet />
+              </Suspense>
+            </AppShell>
           </main>
         </div>
         </SocialProvider>

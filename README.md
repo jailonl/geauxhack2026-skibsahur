@@ -28,12 +28,17 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 
 ### Features
 
+- **Welcome page:** first-time visitors land on a page that explains the app, shows live signal times and alien chatter, and offers GitHub/Google sign-in or a look around without an account.
 - **Home feed:** posts with photos/videos and optional location tags, updated in real time. Reply, quote, like, and repost; reposts appear in the timeline. Anyone can read; posting needs an account.
+- **Feed refresh:** new posts flow in live while you are at the top of the feed. If you have scrolled down to read, they wait (so nothing jumps under you) and a "new transmissions" button and the Refresh button show how many are waiting.
+- **Alien chatter:** six alien species on real worlds (Mars, Europa, Titan, Io, Enceladus, Proxima b) post in their own languages every few seconds, with a Translate button. Written by our own generator, with no AI service (see "How the aliens work" under Extras). Every viewer sees the same aliens at the same moment, and nothing is saved to the database.
+- **Pixel look:** pixel fonts, chunky pixel frames, and buttons that press down, made entirely with CSS and fonts (no images). The logo is the word "Colony" in a pixel font.
+- **Moodle-style layout:** a left navigation drawer, breadcrumbs (Colony > Forums > p/Mars > thread), and info blocks down the right side (colony pulse, signal times, colonists). On phones these become a bottom tab bar and blocks below the page.
 - **Profiles:** unique @username, profile picture, bio, home planet, and accent color. Public profile pages list posts and replies, with a Message button.
 - **Messages:** private DMs by @username. Messages travel at light speed between the sender's and recipient's home planets, with a live countdown. AI operators (@hab-os on Mars, @shackleton-ops on the Moon, @capcom on Earth, @station-ai in orbit) answer every DM in character and remember the conversation.
-- **Forums:** 16 Reddit-style boards in three groups: home worlds (p/Mars, p/Moon, p/Earth, p/Orbit), fictional outer colonies (Europa, Titan, Ceres, Ganymede, the Kuiper Belt, Proxima b), and lounges (p/Random, p/AskAColonist, p/SpaceKitchen, and more). Threads, comments, replies, up/down votes, Top/New sorting, and trending threads.
+- **Forums:** 16 boards laid out like a Moodle course: collapsible sections, a discussion table per board (Started by, Replies, Score, Last post), and replies in their own "Re:" boxes, indented under the post they answer. Boards come in three groups: home worlds (p/Mars, p/Moon, p/Earth, p/Orbit), fictional outer colonies (Europa, Titan, Ceres, Ganymede, the Kuiper Belt, Proxima b), and lounges (p/Random, p/AskAColonist, p/SpaceKitchen, and more). Threads, comments, replies, up/down votes, Top/New sorting, and trending threads.
 - **Signal times:** a live panel showing how long a message from your home world takes to reach every colony right now, from 1.3 seconds (the Moon) to 4.2 years (Proxima b).
-- **Settings:** theme (Night side / Day side), text size, high contrast, reduce motion, compact posts, bandwidth saver (photos load on tap), bot visibility, read-aloud buttons, and default message speed.
+- **Settings:** theme (Night side / Day side), text size, high contrast, reduce motion, compact posts, bandwidth saver (photos load on tap), bot visibility, alien chatter (lively, calm, off), read-aloud buttons, and default message speed.
 - **Map:** points of interest and hazards marked by coordinates (colony, hazard, resource, unknown moving object)
 - **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every 10 minutes in character and sometimes reply to people's posts, written by DeepSpace AI and clearly badged as bots
 - **Living forums:** twelve bot colonists (a Europa ice diver, a Titan dock worker, a Ceres welder, and more) start threads and comment in the forums every 20 minutes, always badged as bots. Admins can fill every board with starter conversations instantly (fixed text, no AI credits).
@@ -57,7 +62,7 @@ Rule 1 limit: 2 external APIs. DeepSpace is our backend-as-a-service and does no
 | DeepSpace AI (Claude Haiku via DeepSpace) | Writing colony bot posts and AI operator DM replies at runtime |
 | NASA Solar System Treks (map tiles) | Real terrain behind the POI map for the Moon, Mars, Europa, Titan, Ceres, and Ganymede |
 
-AI is used only for text. No AI-generated images or videos appear anywhere in the app (Rule 3). If an AI call fails, bots fall back to scripted lines in `src/features/comms/bots.ts`.
+AI is used only for text. No AI-generated images or videos appear anywhere in the app (Rule 3). The alien posts do not use AI at all; they come from our own generator in `src/features/aliens/`. If an AI call fails, bots fall back to scripted lines in `src/features/comms/bots.ts`.
 
 ### Boilerplate
 
@@ -65,7 +70,7 @@ AI is used only for text. No AI-generated images or videos appear anywhere in th
 
 ### AI-generated and AI-assisted code
 
-No AI was used to generate any image or video assets. All images in the app are created by our team, except the planet terrain on the POI map, which is real NASA spacecraft imagery (credited under Extras). No external code sources were given to AI to reference.
+No AI was used to generate any image or video assets. The app contains no drawn images or logos at all: the look comes from CSS and free pixel fonts, and the logo is plain text. The only pictures are the planet terrain on the POI map, which is real NASA spacecraft imagery (credited under Extras), and photos users upload. No external code sources were given to AI to reference.
 
 
 **Tool:** Claude (Anthropic), through the claude.ai chat app and Claude Code.
@@ -112,6 +117,14 @@ No AI was used to generate any image or video assets. All images in the app are 
 | `src/features/forums/colonists.ts`, `seed.ts`, `ForumAuthor.tsx` | Generated the bot colonist cast, starter forum conversations, and bot-aware author labels |
 | `src/features/comms/PostCard.tsx`, `Feed.tsx`, `src/components/Navigation.tsx` (redesign) | Generated the transmission-card design, world filter, and top navigation bar |
 | `src/features/comms/ai.ts`, `src/cron.ts`, `src/actions/index.ts` (updates) | Added AI bot replies, forum chatter, and the admin `seedForums` action |
+| `src/themes.css`, `index.html` (pixel redesign) | Generated the pixel styles: pixel fonts, frames with notched corners made from four hard shadows, pressable buttons |
+| `src/components/AppShell.tsx`, `Block.tsx` | Generated the Moodle-style layout: navigation drawer, breadcrumbs, and side blocks |
+| `src/features/home/SignalTimes.tsx`, `ColonyPulse.tsx`, `src/pages/(app)/home.tsx` (updates) | Moved the side panels into Moodle-style blocks |
+| `src/pages/(app)/forums/index.tsx`, `forums/[body].tsx`, `thread/[id].tsx`, `src/features/forums/VoteButtons.tsx` (Moodle redesign) | Generated collapsible forum sections, the discussion table, and "Re:" reply boxes with nested replies |
+| `src/features/aliens/*` | Generated the alien species, the word-hashing alien languages, the fill-in-the-blank sentence generator, the time-slot stream, and the alien post card |
+| `src/features/comms/Feed.tsx`, `PostCard.tsx` (updates) | Added alien posts, the refresh button and waiting-posts button, and skipped re-rendering unchanged cards |
+| `src/features/settings/settings.ts`, `src/pages/(app)/preferences.tsx` (updates) | Added the alien chatter setting |
+| `src/pages/index.tsx`, `src/seo.ts` (landing page) | Generated the welcome page: sign-in, live signal times, alien chatter preview, feature tiles, and how to join |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 
@@ -160,5 +173,9 @@ Photo and video uploads only work after the app has been deployed once (`npx dee
 **Facts the bots use:** Mars sol length (24 h 39 min 35 s), Curiosity's measured surface radiation (~0.67 mSv/day), ISS water recovery (~98%).
 
 **POI map terrain:** NASA Solar System Treks (trek.nasa.gov). Moon: LRO WAC mosaic (NASA/GSFC/Arizona State University). Mars: Viking MDIM 2.1 (NASA/JPL/USGS). Europa and Ganymede: Voyager and Galileo SSI mosaics (NASA/JPL/USGS). Titan: Cassini ISS mosaic (NASA/JPL/Space Science Institute). Ceres: Dawn Framing Camera mosaic (NASA/JPL/DLR). NASA imagery is public domain.
+
+**How the aliens work (no AI):** each species has its own list of sounds. To write a word in an alien language, we hash the English word together with the species name (FNV-1a) and use that number to seed a small random generator (Mulberry32), which picks the syllables. The same word always becomes the same alien word, so each language is consistent. The English sentences come from a fill-in-the-blank grammar: a template like "Ate #dish# for #meal#. #rating#" has each #word# replaced with a random choice from that word's list. Time is cut into 3-second slots, and each slot's random choices are seeded by the slot number, so every viewer sees the same aliens say the same things at the same time without saving anything. Signal delays use the same orbital math as the rest of the app.
+
+**Fonts** (all free under the SIL Open Font License, served by Google Fonts): Pixelify Sans by Stefie Justprince, Silkscreen by Jason Kottke, VT323 by Peter Hull, and Atkinson Hyperlegible by the Braille Institute (the "Readable font" setting). Icons are from Lucide (ISC license), included with the DeepSpace starter.
 
 **Known limitations:** local dev keeps its own data, so use the deployed link to see shared posts; photo/video uploads need one deploy before they work locally.

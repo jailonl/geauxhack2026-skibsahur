@@ -73,6 +73,7 @@
   --shadow-card-hover: 0 4px 16px 0 rgba(4, 6, 20, 0.5);
   --color-shell: #0d1024;
   --color-shell-panel: #181c3a;
+  --color-frame: #4a5194;
 }
 
 /* Day side — light variant (Settings → Appearance). */
@@ -102,48 +103,92 @@
   --shadow-card-hover: 0 4px 16px 0 rgba(23, 26, 51, 0.1);
   --color-shell: #ebe8f6;
   --color-shell-panel: #ffffff;
+  --color-frame: #a9a3d6;
 }
 
 /* High contrast (Settings → Accessibility): stronger text and dividers on either theme. */
 [data-contrast="high"] {
+  --color-frame: #8b91d8;
   --color-muted-foreground: #d7d8ea;
   --color-border: #6f75b8;
   --color-input: #6f75b8;
 }
 [data-theme="dayside"][data-contrast="high"] {
+  --color-frame: #5b5f8f;
   --color-muted-foreground: #2c2f4d;
   --color-border: #6b6f9a;
   --color-input: #6b6f9a;
 }
 
-/* Typography.
- * Interface: Bricolage Grotesque, a characterful grotesque (names, nav, buttons, headings).
- * Transmissions (post, thread, and message text): Literata, a screen serif, so posts read like dispatches.
+/* Typography: pixel fonts, all free Google Fonts made by type designers (credited in the README).
+ * Pixelify Sans: everything you read (posts, buttons, forms). Clear lowercase, so full sentences stay readable.
+ * Silkscreen (.font-display): the logo, headings, and block titles.
+ * VT323 (.font-signal): terminal-style lines (origin strips, timestamps, breadcrumbs).
  * Settings → "Readable font" switches everything to Atkinson Hyperlegible (designed for low-vision readers). */
 html {
-  font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  font-optical-sizing: auto;
   font-size: var(--app-font-size, 16px);
 }
+/* The starter's styles.css sets a system font on <body>; this replaces it so every piece of text,
+ * including menus, pop-ups, forms, and the landing page, uses the pixel font. */
+html,
+body {
+  font-family: "Pixelify Sans", ui-monospace, monospace;
+}
+body {
+  font-size: 1rem; /* follows Settings → Text size */
+}
 .font-display {
-  font-family: "Bricolage Grotesque", ui-sans-serif, sans-serif;
-  font-stretch: 85%;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: "Silkscreen", "Pixelify Sans", ui-monospace, monospace;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 .font-post {
-  font-family: "Literata", Georgia, serif;
-  font-optical-sizing: auto;
-  line-height: 1.55;
+  font-family: "Pixelify Sans", ui-monospace, monospace;
+  line-height: 1.6;
+}
+.font-signal {
+  font-family: "VT323", ui-monospace, monospace;
+  font-size: 1.15em;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
 }
 [data-font="readable"],
+[data-font="readable"] body,
 [data-font="readable"] .font-display,
-[data-font="readable"] .font-post {
+[data-font="readable"] .font-post,
+[data-font="readable"] .font-signal {
   font-family: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
-  font-stretch: 100%;
   letter-spacing: 0;
 }
+[data-font="readable"] .font-signal {
+  font-size: inherit; /* VT323 runs small, so it is enlarged; Atkinson doesn't need that */
+}
 
+/* Pixel shapes (no images: just CSS).
+ * Square corners everywhere, and cards get a chunky frame with notched corners.
+ * The frame is four hard shadows (top, bottom, left, right) with no blur, so the corners stay empty,
+ * which is what makes it look like a pixel border. */
+*, *::before, *::after {
+  border-radius: 0 !important;
+}
+.border.bg-card {
+  border-color: transparent;
+  box-shadow:
+    0 -3px 0 0 var(--color-frame),
+    0 3px 0 0 var(--color-frame),
+    -3px 0 0 0 var(--color-frame),
+    3px 0 0 0 var(--color-frame);
+}
+/* Primary buttons sit on a darker 3px "ledge" and press down when clicked, like a game menu. */
+button.bg-primary,
+a.bg-primary {
+  box-shadow: 0 3px 0 0 color-mix(in srgb, var(--color-primary) 50%, black);
+}
+button.bg-primary:active:not(:disabled),
+a.bg-primary:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 color-mix(in srgb, var(--color-primary) 50%, black);
+}
 /* Visible keyboard focus everywhere. */
 :focus-visible {
   outline: 2px solid var(--color-ring);
@@ -174,4 +219,12 @@ html {
 }
 .signal-pulse {
   animation: signal-pulse 2.4s ease-in-out infinite;
+}
+
+/* Feed refresh button spin (stops under Reduce motion via the rules above). */
+@keyframes refresh-spin {
+  to { transform: rotate(360deg); }
+}
+.refresh-spin {
+  animation: refresh-spin 0.6s steps(8) 1;
 }

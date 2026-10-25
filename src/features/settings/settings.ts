@@ -1,6 +1,7 @@
 // Personal settings (theme, text size, motion, feed and message preferences).
 // Saved in this browser only. Wrapped in try/catch because browser storage can be blocked.
 import { useSyncExternalStore } from 'react'
+import type { AlienChatter } from '../aliens/useAlienStream'
 
 export type Settings = {
   theme: 'nightside' | 'dayside'
@@ -11,6 +12,7 @@ export type Settings = {
   compactPosts: boolean
   bandwidthSaver: boolean // don't load photos/videos until tapped (Mars has slow links)
   showBots: boolean
+  alienChatter: AlienChatter // how often intercepted alien posts appear in the feed
   readAloud: boolean // show a "read aloud" button on posts and messages
   defaultSpeed: 1 | 10 | 60 // light-delay demo speed for new messages
 }
@@ -24,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
   compactPosts: false,
   bandwidthSaver: false,
   showBots: true,
+  alienChatter: 'lively',
   readAloud: true,
   defaultSpeed: 1,
 }

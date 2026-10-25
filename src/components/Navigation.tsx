@@ -1,6 +1,7 @@
 /**
  * App navigation.
- * - Top bar (all sizes): wordmark, main sections, search, notifications bell, Post button, account menu.
+ * - Top bar (all sizes): wordmark, search, notifications bell, Post button, account menu.
+ * - Tablets also get the main sections here; wide screens have them in the left drawer instead (AppShell).
  * - Phones: the sections move to a bottom tab bar, plus a floating Post button.
  * Links come from src/nav.ts (with role/dev filtering). Keep the data-testid hooks
  * (`app-navigation`, `nav-sign-in-button`, `nav-user-name`, `nav-user-email`) — the shipped tests use them.
@@ -36,16 +37,12 @@ const ICONS: Record<string, typeof House> = {
   '/settings': Shield,
 }
 
-/** The brand mark: a world with an orbit and a signal riding it. */
+/** The brand mark: just the word, set in the Silkscreen pixel font (no drawn logo, so no image assets). */
 function Wordmark() {
   return (
-    <Link to="/home" className="flex shrink-0 items-center gap-2 rounded-full py-1 pr-2" aria-label="Colony, go to the feed">
-      <svg viewBox="0 0 32 32" className="h-8 w-8" aria-hidden>
-        <circle cx="16" cy="16" r="6.5" fill="#e4572e" />
-        <ellipse cx="16" cy="16" rx="14" ry="5.5" fill="none" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1.5" transform="rotate(-24 16 16)" />
-        <circle cx="28.2" cy="10.6" r="2.2" fill="var(--color-primary)" />
-      </svg>
-      <span className="font-display text-2xl leading-none">Colony</span>
+    <Link to="/home" className="flex shrink-0 items-baseline gap-2 py-1 pr-2" aria-label="Colony, go to the feed">
+      <span className="font-display text-2xl leading-none text-primary">Colony</span>
+      <span className="font-signal hidden text-muted-foreground sm:inline">network</span>
     </Link>
   )
 }
@@ -114,7 +111,7 @@ export default function Navigation() {
           <Wordmark />
 
           {/* Main sections (tablet and up) */}
-          <nav aria-label="Main" className="ml-4 hidden items-center gap-1 md:flex">
+          <nav aria-label="Main" className="ml-4 hidden items-center gap-1 md:flex lg:hidden">
             {visibleNav.map((item) => {
               const Icon = ICONS[item.path] ?? House
               const active = isActive(item.path)

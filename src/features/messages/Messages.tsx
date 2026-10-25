@@ -260,7 +260,7 @@ export default function Messages() {
                           </div>
                           <p className="mt-1 text-xs opacity-80">
                             {mine ? 'In transit' : `From ${BODY_LABELS[m.fromBody ?? 'earth']}`} · arrives in{' '}
-                            <span className="font-mono">{formatCountdown(m.deliverAt - now)}</span>
+                            <span className="font-signal">{formatCountdown(m.deliverAt - now)}</span>
                             {m.speed && m.speed > 1 ? ` · ${m.speed}× demo` : ''}
                           </p>
                         </>

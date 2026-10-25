@@ -1,6 +1,7 @@
 // "Colony pulse": a live log of the latest activity everywhere (posts, replies, new threads, forum comments),
 // so the app feels inhabited. Built from data that's already loaded; no extra queries.
 import { Link } from 'react-router-dom'
+import Block from '../../components/Block'
 import { timeAgo } from '../comms/PostCard'
 import { authorOf, useFeedData } from '../comms/feedData'
 import { findForum } from '../forums/forums'
@@ -50,15 +51,18 @@ export default function ColonyPulse() {
     })),
   ]
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    .slice(0, 9)
+    .slice(0, 6)
 
   return (
-    <section aria-labelledby="colony-pulse" className="rounded-2xl border border-border bg-card p-4">
-      <h2 id="colony-pulse" className="flex items-center gap-2 font-display text-lg">
-        <span aria-hidden className="signal-pulse h-2.5 w-2.5 rounded-full bg-green-400" />
-        Colony pulse
-      </h2>
-      <p className="mb-3 text-sm text-muted-foreground">Live activity across every world.</p>
+    <Block
+      id="colony-pulse"
+      title={
+        <>
+          <span aria-hidden className="signal-pulse h-2 w-2 bg-green-400" />
+          Colony pulse
+        </>
+      }
+    >
       {events.length === 0 && <p className="text-sm text-muted-foreground">Quiet right now. Say something.</p>}
       <ol className="space-y-3">
         {events.map((e) => (
@@ -66,13 +70,13 @@ export default function ColonyPulse() {
             <Link to={e.href} className="group block">
               <span className="block text-sm leading-snug">
                 <strong>{e.who}</strong> <span className="text-muted-foreground" style={e.color ? { color: e.color } : undefined}>{e.what}</span>
-                <span className="text-muted-foreground"> · {timeAgo(e.at)}</span>
+                <span className="font-signal text-muted-foreground"> · {timeAgo(e.at)}</span>
               </span>
               <span className="font-post line-clamp-2 block text-sm text-muted-foreground group-hover:text-foreground">{e.detail}</span>
             </Link>
           </li>
         ))}
       </ol>
-    </section>
+    </Block>
   )
 }
