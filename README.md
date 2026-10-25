@@ -54,7 +54,7 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Transmission cards:** every post shows which world it came from and how long its signal took to reach you.
 - **Notifications:** a bell with an unread count for likes, reposts, quotes, replies, direct messages, and forum replies.
 - **Search:** colonists, posts, forums, and threads.
-- **Vitals:** personal health and supply readings with color-coded warnings
+- **Vitals:** a private page (only you can read your readings) for heart rate, blood oxygen, blood pressure, body temperature, daily and mission radiation dose, and oxygen/water/food supplies. Each reading gets an 8-bit heart (full = good, half = warning, empty and blinking = danger) plus the level in words at real medical and NASA limits, with the reason in words and a trend line. "Log a reading", "Recent readings", and "Safety limits" open from buttons so the page stays uncluttered, and after you save a reading its results pop up. Any reading can be **shared** by direct message with colonists or AI operators (it travels with the same light-delay as any DM), and a **Private / Public** setting (on the Vitals page and in Settings) decides whether your latest reading shows on your profile. Your reading history always stays private. A "Read sensors" button fills in a believable reading for your home world (Moon, Mars, station, or Earth radiation levels) so the demo works without real hardware.
 - **Accessibility:** a "Readable font" setting (Atkinson Hyperlegible, designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
 
 ### Tech stack
@@ -78,7 +78,7 @@ AI is used only for text. No AI-generated images or videos appear anywhere in th
 
 ### AI-generated and AI-assisted code
 
-No AI was used to generate any image or video assets. The app contains no drawn images or logos at all: the look comes from CSS and free pixel fonts, and the logo is plain text. The only pictures are the planet terrain on the POI map, which is real NASA spacecraft imagery (credited under Extras), and photos users upload. No external code sources were given to AI to reference.
+No AI was used to generate any image or video assets. The app contains no image files or drawn logos: the look comes from CSS and free pixel fonts, and the logo is plain text. The only drawn shape is the Vitals 8-bit heart, a 9×8 grid of square pixels written out in code (`src/features/vitals/PixelHeart.tsx`), not an image file. The only pictures are the planet terrain on the POI map, which is real NASA spacecraft imagery (credited under Extras), and photos users upload. No external code sources were given to AI to reference.
 
 
 **Tool:** Claude (Anthropic), through the claude.ai chat app and Claude Code.
@@ -147,7 +147,26 @@ No AI was used to generate any image or video assets. The app contains no drawn 
 | `src/schemas/profiles-schema.ts`, `src/features/social/ProfileEditor.tsx`, `profiles.ts` (updates) | All 13 places as home worlds |
 | `src/pages/index.tsx`, `Feed.tsx`, `src/themes.css` (readability) | Solid panels behind text over the starfield and in the feed header, brighter secondary text |
 
-**Code (Vitals):** _list AI-assisted files, or write "No AI used."_
+**Code (Vitals, Brandon Richard):**
+
+| File | What AI did |
+| --- | --- |
+| `src/schemas/vitals-schema.ts` | Generated the private vitals collection schema (owner-only reads, admins included) |
+| `src/features/vitals/types.ts` | Generated the Vitals reading type |
+| `src/features/vitals/limits.ts` | Generated the safety limits, the OK/Watch/Danger checks, form validation, and the mission radiation total (latest reading per day) |
+| `src/features/vitals/simulate.ts` | Generated the "Read sensors" demo reading for each home world |
+| `src/features/vitals/limits.test.ts` | Generated unit tests for the limits, mission dose, validation, and simulator |
+| `src/features/vitals/VitalCard.tsx` | Generated the vital card with level heart, reason, trend line, and time |
+| `src/features/vitals/PixelHeart.tsx`, `src/themes.css` (heart blink) | Generated the 8-bit heart (full, half, empty) from a 9×8 pixel grid, and its danger blink |
+| `src/features/vitals/VitalsForm.tsx` | Generated the "Log a reading" form |
+| `src/pages/(app)/(protected)/vitals.tsx` | Generated the Vitals page: status banner, cards, and the form, history, and safety-limits panels that open from buttons |
+| `src/features/vitals/ReadingResult.tsx` | Generated the pop-up that shows a saved reading's results |
+| `src/schemas/vitals-public-schema.ts` | Generated the public vitals collection: one row per colonist who chose Public, deleted when they go back to Private |
+| `src/features/vitals/sharing.ts`, `sharing.test.ts` | Generated the shared-reading message text, the public profile snapshot, and their tests |
+| `src/features/vitals/useVitalsSharing.ts` | Generated the hooks for the Private/Public setting (keeps the profile copy up to date) and for sending a reading as DMs with light-delay |
+| `src/features/vitals/ShareDialog.tsx`, `VitalsPrivacy.tsx`, `ProfileVitals.tsx` | Generated the Share pop-up, the Private/Public switch, and the Vitals box on profiles |
+| `src/pages/(app)/u/[username].tsx`, `src/pages/(app)/preferences.tsx` | Added the public Vitals box to profiles and a Vitals section to Settings |
+| `src/nav.ts`, `src/components/AppShell.tsx`, `src/components/Navigation.tsx` | Added the Vitals link, breadcrumb, and icon (phone tab bar now has 5 tabs) |
 
 **Code (Points of interest, Jailon Living):**
 
@@ -200,6 +219,8 @@ Photo and video uploads only work after the app has been deployed once (`npx dee
 **Where the places are:** Earth, Mars, Jupiter, and Saturn use circular orbits from their real mean longitudes at J2000; Ceres and the Kuiper freighter use approximate starting points. Moons and the station circle their planet at their real distances. Proxima b (4.2465 light-years) and Alpha Centauri B (4.37 light-years) use their real sky positions. The map squeezes distances with a square root so it fits; the numbers are not squeezed.
 
 **How the aliens work (no AI):** each species has its own list of sounds. To write a word in an alien language, we hash the English word together with the species name (FNV-1a) and use that number to seed a small random generator (Mulberry32), which picks the syllables. The same word always becomes the same alien word, so each language is consistent. The English sentences come from a fill-in-the-blank grammar: a template like "Ate #dish# for #meal#. #rating#" has each #word# replaced with a random choice from that word's list. Time is cut into 3-second slots, and each slot's random choices are seeded by the slot number, so every viewer sees the same aliens say the same things at the same time without saving anything. Signal delays use the same orbital math as the rest of the app.
+
+**Vitals safety limits:** resting heart rate 60–100 bpm is normal (American Heart Association); we flag under 50 or over 100, and danger under 40 or over 130. Blood oxygen under 95% is low and under 90% is hypoxemia. Blood pressure follows the 2017 ACC/AHA guideline (130/80 is high, over 180/120 is a crisis) plus under 90/60 for low pressure. Body temperature: 38.0 °C fever, 40.0 °C heat stroke, under 35.0 °C hypothermia. Radiation: Curiosity's RAD measured about 1.84 mSv/day in deep space and 0.64 mSv/day on the Mars surface, and China's Chang'e 4 lander measured about 1.37 mSv/day on the Moon; over 8.3 mSv in a day is the pace of NASA's old 30-day limit (250 mSv), and NASA's career limit is 600 mSv (NASA-STD-3001). The outer colonies and other stars have no surface measurement, so Vitals uses the deep-space level there and assumes the habitat is shielded (real surfaces like Europa's get thousands of mSv a day from Jupiter's radiation belts). Supplies (under 30 days, under 7 days) are our own colony rule, not a medical limit. This is a hackathon demo, not medical advice.
 
 **Fonts** (all free under the SIL Open Font License, served by Google Fonts): Pixelify Sans by Stefie Justprince, Silkscreen by Jason Kottke, VT323 by Peter Hull, and Atkinson Hyperlegible by the Braille Institute (the "Readable font" setting). Icons are from Lucide (ISC license), included with the DeepSpace starter.
 

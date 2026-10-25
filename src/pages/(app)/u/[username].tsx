@@ -9,6 +9,7 @@ import PostCard from '../../../features/comms/PostCard'
 import { useFeedData, useReactionActions } from '../../../features/comms/feedData'
 import type { Post, PostRecord } from '../../../features/comms/types'
 import UserAvatar from '../../../features/social/UserAvatar'
+import ProfileVitals from '../../../features/vitals/ProfileVitals'
 import { DEFAULT_ACCENT, useMyProfile, useProfiles } from '../../../features/social/profiles'
 
 type Item = { key: string; post: PostRecord; at: string; repostedBy?: { label: string; href?: string } }
@@ -118,6 +119,9 @@ export default function UserPage() {
           ))}
         </nav>
       </section>
+
+      {/* Shows only if they set their vitals to Public (Vitals page). */}
+      <ProfileVitals userId={person.userId} isMe={isMe} />
 
       {items.length === 0 && (
         <p className="rounded-2xl border border-dashed border-border py-10 text-center text-muted-foreground">
