@@ -1,28 +1,36 @@
-// The home timeline: posts, reposts, and intercepted alien posts, newest first, with reply previews under each post.
-// Guests can read everything; posting, replying, quoting, liking, and reposting need an account.
-// Tabs show one world's tagged posts; bots and aliens follow the Settings; admins can summon a bot or delete any post.
-//
-// Refresh: new items appear right away while you're at the top of the feed. If you've scrolled down to read,
-// they wait (so nothing jumps under you) and a "new transmissions" button shows how many are waiting.
-import { useCallback, useEffect, useRef, useState } from 'react'
+// The home timeline: people's posts and reposts, colony chatter from the bot colonists, and intercepted
+// alien posts, with reply previews under each post. Guests can read everything; posting, replying,
+// quoting, liking, and reposting need an account.
+// - World tabs show posts from that world: the post's location tag, or else where the author lives.
+// - Sort: newest first, most liked, or most replies.
+// - Refresh: new items appear right away while you're at the top. If you've scrolled down to read, they
+//   wait (so nothing jumps under you) and a "new transmissions" button shows how many are waiting.
+// - Only the first 30 items are drawn; "Show more" adds 30 at a time, so slow phones stay smooth.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getAuthToken, useAuth, useMutations, useUser } from 'deepspace'
 import { RefreshCw } from 'lucide-react'
 import { BODY_LABELS, PLANET_COLORS } from '../../lib/space'
 import AlienCard from '../aliens/AlienCard'
 import type { AlienPost } from '../aliens/generator'
-import { quotesFrom, useAlienStream, type AlienChatter } from '../aliens/useAlienStream'
+import { latestAliens, quotesFrom } from '../aliens/latest'
+import ColonyCard from '../chatter/ColonyCard'
+import { latestColonyPosts, type ColonyPost } from '../chatter/colonyChatter'
+import { useSlotClock } from '../chatter/stream'
 import { updateSettings, useSettings } from '../settings/settings'
 import { useMyProfile, useProfiles } from '../social/profiles'
 import PostCard from './PostCard'
 import PostComposer from './PostComposer'
-import { useFeedData, useReactionActions } from './feedData'
+import { originOf, useFeedData, useReactionActions } from './feedData'
 import type { Body, Post, PostRecord } from './types'
 
 const TABS: (Body | 'all')[] = ['all', 'mars', 'moon', 'earth', 'station']
+const PAGE = 30
+type Sort = 'new' | 'liked' | 'replies'
 
 type FeedItem =
-  | { kind: 'post'; key: string; at: number; mine: boolean; post: PostRecord; repostedBy?: { label: string; href?: string } }
-  | { kind: 'alien'; key: string; at: number; mine: false; alien: AlienPost }
+  | { kind: 'post'; key: string; at: number; mine: boolean; world: Body | null; post: PostRecord; repostedBy?: { label: string; href?: string } }
+  | { kind: 'colony'; key: string; at: number; mine: false; world: Body; colony: ColonyPost }
+  | { kind: 'alien'; key: string; at: number; mine: false; world: Body | null; alien: AlienPost }
 
 /** The scrolling area of the app (the <main> element in the layout). */
 function scroller(): HTMLElement | null {
@@ -32,6 +40,8 @@ const NEAR_TOP = 120 // px: "at the top of the feed"
 
 export default function Feed() {
   const [tab, setTab] = useState<Body | 'all'>('all')
+  const [sort, setSort] = useState<Sort>('new')
+  const [limit, setLimit] = useState(PAGE)
   const [summoning, setSummoning] = useState(false)
   const { showBots, alienChatter } = useSettings()
   const [cutoff, setCutoff] = useState(() => Date.now()) // items after this time wait for a refresh
@@ -39,46 +49,65 @@ export default function Feed() {
 
   const feed = useFeedData()
   const profiles = useProfiles()
-  const { profile: me } = useMyProfile()
+  const { profile: me, isSignedIn } = useMyProfile()
   const { userId } = useAuth()
   const { user } = useUser()
   const { remove } = useMutations<Post>('posts')
   const reactions = useReactionActions()
   const isAdmin = user?.role === 'admin' || user?.isAdmin === true
+  const botsVisible = !isSignedIn || showBots // only signed-in people get the "Show bots" switch
+  const myHome: Body = me?.homeBody ?? 'earth'
 
-  // Aliens can quote recent human posts they "intercepted".
-  const humanQuotes = quotesFrom(feed.posts.filter((p) => !p.data.botKind && !p.data.replyToId).map((p) => p.data.text))
-  const aliens = useAlienStream(alienChatter, humanQuotes)
-
-  // Timeline = original posts (not replies), reposts (each at the time it happened), and alien posts.
-  const items: FeedItem[] = []
-  for (const p of feed.posts) {
-    if (!p.data.replyToId) {
-      items.push({ kind: 'post', key: p.recordId, post: p, at: new Date(p.createdAt).getTime(), mine: userId != null && p.createdBy === userId })
+  // People's posts and reposts. Worked out only when the data changes, not on every clock tick.
+  const postItems = useMemo(() => {
+    const list: FeedItem[] = []
+    for (const p of feed.posts) {
+      if (p.data.replyToId) continue
+      list.push({ kind: 'post', key: p.recordId, post: p, world: originOf(p, profiles), at: new Date(p.createdAt).getTime(), mine: userId != null && p.createdBy === userId })
     }
-  }
-  for (const r of feed.reposts) {
-    const post = feed.byId.get(r.data.targetId)
-    if (!post) continue
-    const who = profiles.byUserId.get(r.createdBy)
-    const isMe = userId != null && r.createdBy === userId
-    items.push({
-      kind: 'post',
-      key: `repost-${r.recordId}`,
-      post,
-      at: new Date(r.createdAt).getTime(),
-      mine: isMe,
-      repostedBy: { label: isMe ? 'You' : who ? `@${who.username}` : 'Someone', href: who ? `/u/${who.username}` : undefined },
-    })
-  }
-  for (const a of aliens) items.push({ kind: 'alien', key: a.id, alien: a, at: a.at, mine: false })
+    for (const r of feed.reposts) {
+      const post = feed.byId.get(r.data.targetId)
+      if (!post) continue
+      const who = profiles.byUserId.get(r.createdBy)
+      const isMe = userId != null && r.createdBy === userId
+      list.push({
+        kind: 'post',
+        key: `repost-${r.recordId}`,
+        post,
+        world: originOf(post, profiles),
+        at: new Date(r.createdAt).getTime(),
+        mine: isMe,
+        repostedBy: { label: isMe ? 'You' : who ? `@${who.username}` : 'Someone', href: who ? `/u/${who.username}` : undefined },
+      })
+    }
+    return list
+  }, [feed, profiles, userId])
 
-  const inTab = (i: FeedItem) =>
-    tab === 'all' || (i.kind === 'post' ? i.post.data.body === tab : i.alien.species.feedTab === tab)
-  const all = items
-    .filter(inTab)
-    .filter((i) => i.kind === 'alien' || showBots || !i.post.data.botKind)
-    .sort((a, b) => b.at - a.at)
+  // Generated posts (no database): colony chatter for every world, and aliens who quote recent human posts.
+  const slot = useSlotClock()
+  const quotes = useMemo(() => quotesFrom(feed.posts.filter((p) => !p.data.botKind && !p.data.replyToId).map((p) => p.data.text)), [feed.posts])
+  const generated = useMemo(() => {
+    const list: FeedItem[] = []
+    if (botsVisible) {
+      const colony = latestColonyPosts(slot, 6)
+      const shown = tab === 'all' ? colony.slice(0, 8) : colony.filter((c) => c.world === tab)
+      for (const c of shown) list.push({ kind: 'colony', key: c.id, colony: c, world: c.world, at: c.at, mine: false })
+    }
+    for (const a of latestAliens(slot, alienChatter, quotes, 5)) {
+      list.push({ kind: 'alien', key: a.id, alien: a, world: a.species.feedTab ?? null, at: a.at, mine: false })
+    }
+    return list
+  }, [slot, botsVisible, tab, alienChatter, quotes])
+
+  // Score for the sort menu (generated posts have no likes or replies, so they sort last).
+  const score = (i: FeedItem) => {
+    if (i.kind !== 'post' || sort === 'new') return 0
+    const s = feed.stats(i.post.recordId)
+    return sort === 'liked' ? s.likes + s.reposts : s.replies
+  }
+  const all = [...postItems.filter((i) => botsVisible || (i.kind === 'post' && !i.post.data.botKind)), ...generated]
+    .filter((i) => tab === 'all' || i.world === tab)
+    .sort((a, b) => score(b) - score(a) || b.at - a.at)
   // Your own posts always show at once; everything newer than the cutoff waits for a refresh.
   const waiting = all.filter((i) => i.at > cutoff && !i.mine)
   const visible = all.filter((i) => i.at <= cutoff || i.mine)
@@ -88,6 +117,10 @@ export default function Feed() {
     setSpinning(true)
     window.setTimeout(() => setSpinning(false), 600)
     scroller()?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  function chooseTab(t: Body | 'all') {
+    setTab(t)
+    setLimit(PAGE)
   }
 
   // At the top of the feed, new items flow in live. Scrolled down, they wait until you come back up or tap the button.
@@ -144,34 +177,38 @@ export default function Feed() {
 
   return (
     <div className="space-y-3">
-      {/* Header: title, world filter, bot toggle */}
       <header className="flex flex-wrap items-end justify-between gap-3 pt-1">
         <div>
           <h1 className="font-display text-3xl leading-none">The feed</h1>
           <p className="mt-1 text-sm text-muted-foreground">Transmissions from every colony, as they arrive.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={showBots}
-              onChange={(e) => updateSettings({ showBots: e.target.checked })}
-              className="accent-[var(--color-primary)]"
-            />
-            Show bots
-          </label>
           <label className="flex items-center gap-1.5 text-muted-foreground">
-            Aliens
+            Sort
             <select
-              value={alienChatter}
-              onChange={(e) => updateSettings({ alienChatter: e.target.value as AlienChatter })}
+              value={sort}
+              onChange={(e) => {
+                setSort(e.target.value as Sort)
+                setLimit(PAGE)
+              }}
               className="border border-border bg-card px-1.5 py-0.5 text-foreground"
             >
-              <option value="lively">Lively</option>
-              <option value="calm">Calm</option>
-              <option value="off">Off</option>
+              <option value="new">Newest</option>
+              <option value="liked">Most liked</option>
+              <option value="replies">Most replies</option>
             </select>
           </label>
+          {isSignedIn && (
+            <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={showBots}
+                onChange={(e) => updateSettings({ showBots: e.target.checked })}
+                className="accent-[var(--color-primary)]"
+              />
+              Show bots
+            </label>
+          )}
           <button
             type="button"
             onClick={refresh}
@@ -198,16 +235,16 @@ export default function Feed() {
             <button
               key={t}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => chooseTab(t)}
               aria-pressed={active}
-              className="flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-bold transition-colors"
+              className="flex shrink-0 items-center gap-2 border px-3 py-1.5 text-sm font-bold"
               style={
                 active
                   ? { background: `color-mix(in srgb, ${color} 22%, transparent)`, borderColor: color, color: 'var(--color-foreground)' }
                   : { borderColor: 'var(--color-border)', color: 'var(--color-muted-foreground)' }
               }
             >
-              <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: color }} />
+              <span aria-hidden className="h-2 w-2" style={{ background: color }} />
               {t === 'all' ? 'Every world' : BODY_LABELS[t]}
             </button>
           )
@@ -219,8 +256,8 @@ export default function Feed() {
       {feed.status === 'loading' && <p className="py-6 text-muted-foreground">Tuning in to the colony feed...</p>}
       {feed.status === 'error' && <p role="alert" className="py-6 text-destructive">Could not load the feed: {feed.error}</p>}
       {feed.status === 'ready' && visible.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-border py-10 text-center text-muted-foreground">
-          {tab === 'all' ? 'No transmissions yet. Be the first to post.' : `Nothing tagged ${BODY_LABELS[tab]} yet. Tag a location when you post.`}
+        <p className="border border-dashed border-border py-10 text-center text-muted-foreground">
+          {tab === 'all' ? 'No transmissions yet. Be the first to post.' : `Nothing from ${BODY_LABELS[tab]} yet.`}
         </p>
       )}
 
@@ -233,9 +270,11 @@ export default function Feed() {
         </div>
       )}
 
-      {visible.map((item) =>
+      {visible.slice(0, limit).map((item) =>
         item.kind === 'alien' ? (
           <AlienCard key={item.key} post={item.alien} />
+        ) : item.kind === 'colony' ? (
+          <ColonyCard key={item.key} post={item.colony} myHome={myHome} />
         ) : (
           <PostCard
             key={item.key}
@@ -251,6 +290,12 @@ export default function Feed() {
             showReplyPreview
           />
         ),
+      )}
+
+      {visible.length > limit && (
+        <button type="button" onClick={() => setLimit(limit + PAGE)} className="w-full border border-border py-2.5 font-bold hover:bg-accent">
+          Show more ({visible.length - limit} left)
+        </button>
       )}
     </div>
   )

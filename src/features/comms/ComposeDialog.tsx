@@ -16,7 +16,7 @@ export default function ComposeDialog({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-label="New post"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[10vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 pt-[10vh]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="w-full max-w-xl rounded-2xl border border-border bg-popover p-4 shadow-[0_8px_40px_rgba(4,6,20,0.6)]">

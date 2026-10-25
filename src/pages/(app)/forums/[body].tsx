@@ -5,8 +5,9 @@ import { Link, useParams } from 'react-router-dom'
 import { useMutations, useQuery } from 'deepspace'
 import ForumAuthor from '../../../features/forums/ForumAuthor'
 import { findColonist } from '../../../features/forums/colonists'
-import { FORUMS, findForum, useVotes, type Comment, type Thread } from '../../../features/forums/forums'
+import { FORUMS, findForum, useVotes, type Thread } from '../../../features/forums/forums'
 import ProfileEditor from '../../../features/social/ProfileEditor'
+import { useForumActivity } from '../../../features/social/SocialProvider'
 import { useMyProfile, useProfiles } from '../../../features/social/profiles'
 import { SignInPrompt } from '../../../features/social/SignIn'
 
@@ -35,7 +36,7 @@ export default function ForumPage() {
     orderDir: 'desc',
     limit: 200,
   })
-  const comments = useQuery<Comment>('comments', { limit: 5000 })
+  const { comments: recentComments } = useForumActivity() // recent comments, shared app-wide (no extra download)
   const { ready, create } = useMutations<Thread>('threads')
 
   if (!forum) {
@@ -50,7 +51,7 @@ export default function ForumPage() {
   // One pass over comments: reply count and newest reply per thread (not one pass per thread).
   const counts = new Map<string, number>()
   const lastReply = new Map<string, { at: string; who: string }>()
-  for (const c of comments.records) {
+  for (const c of recentComments) {
     const id = c.data.threadId
     counts.set(id, (counts.get(id) ?? 0) + 1)
     const prev = lastReply.get(id)

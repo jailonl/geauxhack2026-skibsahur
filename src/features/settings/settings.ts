@@ -1,7 +1,7 @@
 // Personal settings (theme, text size, motion, feed and message preferences).
 // Saved in this browser only. Wrapped in try/catch because browser storage can be blocked.
 import { useSyncExternalStore } from 'react'
-import type { AlienChatter } from '../aliens/useAlienStream'
+import type { AlienChatter } from '../aliens/latest'
 
 export type Settings = {
   theme: 'nightside' | 'dayside'

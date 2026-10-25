@@ -106,7 +106,7 @@ export default function Navigation() {
 
   return (
     <>
-      <header data-testid="app-navigation" className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
+      <header data-testid="app-navigation" className="sticky top-0 z-30 border-b border-border bg-background">
         <div className="mx-auto flex h-16 max-w-[1180px] items-center gap-2 px-4">
           <Wordmark />
 
@@ -215,7 +215,7 @@ export default function Navigation() {
       {/* Phone bottom tab bar */}
       <nav
         aria-label="Sections"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {visibleNav.filter((i) => !i.roles).slice(0, 4).map((item) => {
           const Icon = ICONS[item.path] ?? House

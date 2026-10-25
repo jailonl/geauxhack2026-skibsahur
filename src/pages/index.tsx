@@ -10,7 +10,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import AlienCard from '../features/aliens/AlienCard'
 import Starfield from '../features/home/Starfield'
-import { useAlienStream } from '../features/aliens/useAlienStream'
+import { latestAliens } from '../features/aliens/latest'
+import { useSlotClock } from '../features/chatter/stream'
 import { applySettings } from '../features/settings/settings'
 import { SignInButtons } from '../features/social/SignIn'
 import { formatDelay, formatLongDelay, earthToOuterPlanetSeconds, lightDelaySeconds, PROXIMA_SECONDS } from '../lib/space'
@@ -53,7 +54,8 @@ function LiveDelays() {
 
 /** The three newest alien transmissions, updating every few seconds (browser only). */
 function AlienTicker() {
-  const aliens = useAlienStream('lively', [], 3)
+  const slot = useSlotClock()
+  const aliens = latestAliens(slot, 'lively', [], 3)
   return (
     <div className="space-y-4">
       {aliens.map((a) => (
@@ -102,14 +104,14 @@ export default function Landing() {
 
         <section aria-labelledby="title" className="flex min-h-[60vh] flex-col items-center justify-center text-center">
           <p className="font-signal mb-4 text-lg text-muted-foreground">&gt; INCOMING TRANSMISSION</p>
-          <h1 id="title" className="font-display text-6xl leading-none text-primary sm:text-8xl">Stellar</h1>
+          <h1 id="title" className="font-display text-5xl leading-none text-primary sm:text-7xl md:text-8xl">Stellar</h1>
           <p className="mt-4 max-w-xl text-lg text-muted-foreground">
             The social network for life beyond Earth, where every message takes real time to cross space.
           </p>
 
           <Link
             to="/home"
-            className="font-display mt-10 block border border-border bg-card px-6 py-4 text-xl hover:bg-accent sm:text-2xl"
+            className="font-display mt-10 block border border-border bg-card px-5 py-4 text-lg hover:bg-accent sm:text-2xl"
             aria-label="Press Enter to enter Stellar"
           >
             <span className="text-muted-foreground">Press Enter:</span> <span className="text-primary">Stellar</span>
