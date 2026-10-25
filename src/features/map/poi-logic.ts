@@ -1,7 +1,7 @@
 // POI rules with no UI, ported from my Java PoiForm (isAlreadyDiscovered, isValid, the off-map check).
 import type { MapBody, PoiType, PointOfInterest } from './types'
 
-export const MAP_BODIES: MapBody[] = ['moon', 'mars', 'station', 'europa', 'titan', 'ceres', 'ganymede'] // the map tabs
+export const MAP_BODIES: MapBody[] = ['moon', 'mars', 'europa', 'titan', 'ceres', 'ganymede'] // the map tabs
 export const POI_TYPES: PoiType[] = ['colony', 'hazard', 'resource', 'unknown']
 export const NEARBY = 1.0 // within 1 degree counts as the same spot
 
