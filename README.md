@@ -30,6 +30,11 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 
 - **Welcome page:** a "Press Enter: Stellar" title screen (enter Stellar: interstellar) over a twinkling pixel starfield (tiny squares placed by code, no image). Press Enter anywhere, or the button, to go in. Below it, the page explains the app, shows live signal times and alien chatter, and offers GitHub/Google sign-in or a look around without an account.
 - **Home feed:** posts with photos/videos and optional location tags, updated in real time. Reply, quote, like, and repost; reposts appear in the timeline. Anyone can read; posting needs an account.
+- **Signal map:** pick any two of 13 places (Earth, Moon, the station, Mars, Ceres, Europa, Ganymede, Io, Titan, Enceladus, a Kuiper Belt freighter, Proxima b, Alpha Centauri B) and see the light delay between them right now, when a message sent now arrives, and how soon a reply could come back, on a solar-system map drawn from the same orbit math. On the welcome page and at /signals.
+- **Live anywhere:** profiles can choose any of those 13 places as home, and every light delay (posts, messages, profiles) uses the real distance between them.
+- **Photos:** posts and replies show a preview of the attached photo or video before sending, and a post can be just a photo.
+- **Bot pictures:** bots (feed posts, replies, colony chatter, and AI operators in messages) sometimes attach a picture from `public/bot-images/`. These are the team's own pictures, listed in `src/features/comms/botImages.ts`; nothing is AI-generated.
+- **Prompt-injection protection:** everything users write is fenced off as untrusted text before an AI sees it, every AI prompt carries security rules, user text is length-limited, and every AI answer is checked (no links, code, HTML, emails, or talk about its instructions) before it is posted; anything that fails falls back to a safe scripted line. See `src/features/comms/aiSafety.ts`.
 - **World tabs and sort:** each tab (Mars, Moon, Earth, Orbit) shows posts from that world, by location tag or else where the author lives. Sort by newest, most liked, or most replies. Only 30 posts are drawn at a time ("Show more" adds 30), so the feed stays smooth on slow phones.
 - **Colony chatter:** the bot colonists on each world post everyday life updates (greenhouse harvests, Earthrise, launch windows) about every 12 seconds, so every tab always has something to read. Our own fill-in-the-blank generator, no AI and nothing saved; always badged "Bot".
 - **Forum threads from the map:** every point of interest on the map gets a forum thread in its world's board (hazard reports, colony check-ins, resource finds, unknown objects), started by a bot colonist with two replies. New POIs get a thread within 20 minutes; admins can also add them right away with "Seed the forums".
@@ -134,6 +139,13 @@ No AI was used to generate any image or video assets. The app contains no image 
 | `src/features/comms/Feed.tsx`, `feedData.ts` (updates) | World tabs by origin, sort menu, colony chatter, guest-only controls, and 30-at-a-time paging |
 | `src/components/AppShell.tsx`, `forums/index.tsx`, `forums/[body].tsx`, `SocialProvider.tsx` (updates) | Removed the Colony pulse block, hid empty forums and guest-only links, and shared forum data instead of separate large downloads |
 | `src/pages/(app)/_layout.tsx`, `Navigation.tsx`, `SignIn.tsx`, `ComposeDialog.tsx`, `index.tsx` (performance) | Phone-safe screen height, removed blur effects that slow down weak devices, smaller title on small screens |
+| `src/lib/space.ts` (update) | Generated positions for 13 places (planet orbits, moons, the station, two nearby stars) and any-to-any light delay |
+| `src/features/signals/SignalMap.tsx`, `src/pages/(app)/signals.tsx` | Generated the signal map (place pickers, delay readout, drawn solar-system map) |
+| `src/features/comms/aiSafety.ts`, `src/features/comms/ai.ts` (update) | Generated the prompt-injection defenses and applied them to every AI call |
+| `src/features/comms/botImages.ts`, `bots.ts`, `src/cron.ts`, `src/schemas/dms-schema.ts`, `Messages.tsx`, `src/features/chatter/*` (updates) | Let bots and AI operators attach the team's own pictures |
+| `src/features/comms/PostComposer.tsx`, `PostCard.tsx` (updates) | Photo preview before posting, photo-only posts, clearer upload errors, bot pictures |
+| `src/schemas/profiles-schema.ts`, `src/features/social/ProfileEditor.tsx`, `profiles.ts` (updates) | All 13 places as home worlds |
+| `src/pages/index.tsx`, `Feed.tsx`, `src/themes.css` (readability) | Solid panels behind text over the starfield and in the feed header, brighter secondary text |
 
 **Code (Vitals, Brandon Richard):**
 
@@ -203,6 +215,8 @@ Photo and video uploads only work after the app has been deployed once (`npx dee
 **Facts the bots use:** Mars sol length (24 h 39 min 35 s), Curiosity's measured surface radiation (~0.67 mSv/day), ISS water recovery (~98%).
 
 **POI map terrain:** NASA Solar System Treks (trek.nasa.gov). Moon: LRO WAC mosaic (NASA/GSFC/Arizona State University). Mars: Viking MDIM 2.1 (NASA/JPL/USGS). Europa and Ganymede: Voyager and Galileo SSI mosaics (NASA/JPL/USGS). Titan: Cassini ISS mosaic (NASA/JPL/Space Science Institute). Ceres: Dawn Framing Camera mosaic (NASA/JPL/DLR). NASA imagery is public domain.
+
+**Where the places are:** Earth, Mars, Jupiter, and Saturn use circular orbits from their real mean longitudes at J2000; Ceres and the Kuiper freighter use approximate starting points. Moons and the station circle their planet at their real distances. Proxima b (4.2465 light-years) and Alpha Centauri B (4.37 light-years) use their real sky positions. The map squeezes distances with a square root so it fits; the numbers are not squeezed.
 
 **How the aliens work (no AI):** each species has its own list of sounds. To write a word in an alien language, we hash the English word together with the species name (FNV-1a) and use that number to seed a small random generator (Mulberry32), which picks the syllables. The same word always becomes the same alien word, so each language is consistent. The English sentences come from a fill-in-the-blank grammar: a template like "Ate #dish# for #meal#. #rating#" has each #word# replaced with a random choice from that word's list. Time is cut into 3-second slots, and each slot's random choices are seeded by the slot number, so every viewer sees the same aliens say the same things at the same time without saving anything. Signal delays use the same orbital math as the rest of the app.
 

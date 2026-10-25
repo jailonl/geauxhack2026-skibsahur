@@ -18,8 +18,9 @@ import { pickPersona, toBotPost } from './features/comms/bots'
 import { colonistFor } from './features/forums/colonists'
 import { FORUMS } from './features/forums/forums'
 import { addPoiThreads, type Poi } from './features/forums/poiThreads'
+import { botImageFor } from './features/comms/botImages'
 import { findOperator, type Operator } from './features/social/operators'
-import { lightDelaySeconds, type Body } from './lib/space'
+import { lightDelaySeconds, type Place } from './lib/space'
 
 // How often a colony bot posts to the feed. Each post is one DeepSpace AI call (uses credits).
 const BOT_INTERVAL_MINUTES = 10
@@ -50,7 +51,7 @@ export const tasks: CronTask[] = [
 type Dm = {
   toId: string
   content: string
-  fromBody?: Body
+  fromBody?: Place
   deliverAt: number
   speed?: number
   isOperator?: number | boolean
@@ -134,7 +135,7 @@ async function answerOperatorDms(env: Env, ctx: Ctx): Promise<void> {
 
       replies++
       const senderId = record.createdBy
-      const senderBody: Body = msg.fromBody ?? 'earth'
+      const senderBody: Place = msg.fromBody ?? 'earth'
       const senderName = await usernameOf(ctx, senderId)
       const aiReply = await generateOperatorReply(
         env,
@@ -147,6 +148,7 @@ async function answerOperatorDms(env: Env, ctx: Ctx): Promise<void> {
       // The reply travels back to the sender at the same speed-up they used.
       const speed = Math.min(60, Math.max(1, Number(msg.speed) || 1))
       const returnMs = (lightDelaySeconds(operator.body, senderBody, now) * 1000) / speed
+      const picture = botImageFor(operator.body) // sometimes one of the team's pictures (src/features/comms/botImages.ts)
       await ctx.records.create('dms', {
         toId: senderId,
         participants: [senderId], // only the colonist can read the reply
@@ -158,6 +160,7 @@ async function answerOperatorDms(env: Env, ctx: Ctx): Promise<void> {
         wantsReply: 0,
         isOperator: 1,
         fromId: operator.id,
+        ...(picture ? { mediaKey: picture.mediaKey, mediaAlt: picture.mediaAlt } : {}),
       })
       console.log(
         `[operator-replies] ${operator.name} answered ${record.recordId}` + (aiReply ? '' : ' with the fallback (AI gave no answer)'),

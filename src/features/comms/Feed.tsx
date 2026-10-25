@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getAuthToken, useAuth, useMutations, useUser } from 'deepspace'
 import { RefreshCw } from 'lucide-react'
-import { BODY_LABELS, PLANET_COLORS } from '../../lib/space'
+import { BODY_LABELS, PLANET_COLORS, type Place } from '../../lib/space'
 import AlienCard from '../aliens/AlienCard'
 import type { AlienPost } from '../aliens/generator'
 import { latestAliens, quotesFrom } from '../aliens/latest'
@@ -28,9 +28,9 @@ const PAGE = 30
 type Sort = 'new' | 'liked' | 'replies'
 
 type FeedItem =
-  | { kind: 'post'; key: string; at: number; mine: boolean; world: Body | null; post: PostRecord; repostedBy?: { label: string; href?: string } }
+  | { kind: 'post'; key: string; at: number; mine: boolean; world: Place | null; post: PostRecord; repostedBy?: { label: string; href?: string } }
   | { kind: 'colony'; key: string; at: number; mine: false; world: Body; colony: ColonyPost }
-  | { kind: 'alien'; key: string; at: number; mine: false; world: Body | null; alien: AlienPost }
+  | { kind: 'alien'; key: string; at: number; mine: false; world: Place | null; alien: AlienPost }
 
 /** The scrolling area of the app (the <main> element in the layout). */
 function scroller(): HTMLElement | null {
@@ -56,7 +56,7 @@ export default function Feed() {
   const reactions = useReactionActions()
   const isAdmin = user?.role === 'admin' || user?.isAdmin === true
   const botsVisible = !isSignedIn || showBots // only signed-in people get the "Show bots" switch
-  const myHome: Body = me?.homeBody ?? 'earth'
+  const myHome: Place = me?.homeBody ?? 'earth'
 
   // People's posts and reposts. Worked out only when the data changes, not on every clock tick.
   const postItems = useMemo(() => {
@@ -177,7 +177,9 @@ export default function Feed() {
 
   return (
     <div className="space-y-3">
-      <header className="flex flex-wrap items-end justify-between gap-3 pt-1">
+      {/* Title, controls, and tabs sit on a solid card so they read clearly. */}
+      <div className="space-y-3 border border-border bg-card p-3">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl leading-none">The feed</h1>
           <p className="mt-1 text-sm text-muted-foreground">Transmissions from every colony, as they arrive.</p>
@@ -227,7 +229,7 @@ export default function Feed() {
         </div>
       </header>
 
-      <nav aria-label="Filter by world" className="flex gap-2 overflow-x-auto pb-1">
+      <nav aria-label="Filter by world" className="flex gap-2 overflow-x-auto p-1">
         {TABS.map((t) => {
           const active = tab === t
           const color = t === 'all' ? 'var(--color-primary)' : PLANET_COLORS[t]
@@ -250,6 +252,7 @@ export default function Feed() {
           )
         })}
       </nav>
+      </div>
 
       <PostComposer compact />
 

@@ -1,7 +1,7 @@
 // Profiles: types, validation, and hooks to look people up by user id or @username.
 import { createContext, useContext, useMemo } from 'react'
 import { useAuth, useQuery } from 'deepspace'
-import type { Body } from '../../lib/space'
+import type { Place } from '../../lib/space'
 import { OPERATORS } from './operators'
 
 export type Profile = {
@@ -9,7 +9,7 @@ export type Profile = {
   username: string
   displayName?: string
   bio?: string
-  homeBody?: Body
+  homeBody?: Place
   avatarKey?: string
   accent?: string
 }
