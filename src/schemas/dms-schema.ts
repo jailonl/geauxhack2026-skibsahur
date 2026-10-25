@@ -2,6 +2,7 @@
 // Only the sender (createdBy) and the people in `participants` can read a message; the server enforces it.
 // Each message stores when it arrives (deliverAt), so messages between planets wait out the light-delay.
 import type { CollectionSchema } from 'deepspace/schema'
+import { ALL_PLACES } from '../lib/space'
 
 const FIELDS = ['toId', 'participants', 'content', 'fromBody', 'toBody', 'deliverAt', 'speed', 'wantsReply']
 
@@ -13,8 +14,8 @@ export const dmsSchema: CollectionSchema = {
     // JSON list of user ids (besides the sender) allowed to read this message: normally just the recipient.
     { name: 'participants', storage: 'text', interpretation: { kind: 'json' }, required: true },
     { name: 'content', storage: 'text', interpretation: 'plain', required: true },
-    { name: 'fromBody', storage: 'text', interpretation: { kind: 'select', options: ['earth', 'moon', 'mars', 'station'] } },
-    { name: 'toBody', storage: 'text', interpretation: { kind: 'select', options: ['earth', 'moon', 'mars', 'station'] } },
+    { name: 'fromBody', storage: 'text', interpretation: { kind: 'select', options: ALL_PLACES } },
+    { name: 'toBody', storage: 'text', interpretation: { kind: 'select', options: ALL_PLACES } },
     // Arrival time in milliseconds since 1970 (Date.now() style).
     { name: 'deliverAt', storage: 'number', interpretation: 'plain', required: true },
     { name: 'speed', storage: 'number', interpretation: 'plain', default: 1 }, // demo speed-up (1 = real time)
@@ -23,6 +24,9 @@ export const dmsSchema: CollectionSchema = {
     // Set only by the server on AI operator replies: which operator sent it.
     { name: 'isOperator', storage: 'number', interpretation: 'boolean' },
     { name: 'fromId', storage: 'text', interpretation: 'plain' },
+    // Set only by the server: a picture an operator attaches from public/bot-images/ (see botImages.ts).
+    { name: 'mediaKey', storage: 'text', interpretation: 'plain' },
+    { name: 'mediaAlt', storage: 'text', interpretation: 'plain' },
   ],
   collaboratorsField: 'participants',
   permissions: {

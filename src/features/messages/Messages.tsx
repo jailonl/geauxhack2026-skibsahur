@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutations, useQuery } from 'deepspace'
 import { Volume2 } from 'lucide-react'
-import { BODY_LABELS, formatCountdown, formatDelay, lightDelaySeconds, type Body } from '../../lib/space'
+import { BODY_LABELS, formatCountdown, formatDelay, lightDelaySeconds, type Place } from '../../lib/space'
 import { speak, useSettings } from '../settings/settings'
 import ProfileEditor from '../social/ProfileEditor'
 import UserAvatar from '../social/UserAvatar'
@@ -17,8 +17,10 @@ type Dm = {
   toId: string
   participants: string[]
   content: string
-  fromBody?: Body
-  toBody?: Body
+  fromBody?: Place
+  toBody?: Place
+  mediaKey?: string // operator replies can carry a picture from public/bot-images/
+  mediaAlt?: string
   deliverAt: number
   speed?: number
   wantsReply?: number
@@ -31,7 +33,7 @@ type Contact = {
   id: string // user id or operator id
   name: string
   handle: string
-  body: Body
+  body: Place
   avatarKey?: string
   accent?: string
   emoji?: string
@@ -119,7 +121,7 @@ export default function Messages() {
   if (loading) return <p className="text-muted-foreground">Loading...</p>
   if (!me) return <ProfileEditor existing={null} />
 
-  const myBody: Body = me.homeBody ?? 'earth'
+  const myBody: Place = me.homeBody ?? 'earth'
 
   function openConversation(handle: string) {
     setParams({ to: handle })
@@ -267,6 +269,9 @@ export default function Messages() {
                       ) : (
                         <>
                           <p className="font-post whitespace-pre-wrap break-words">{m.content}</p>
+                          {m.mediaKey?.startsWith('/') && (
+                            <img src={m.mediaKey} alt={m.mediaAlt ?? ''} loading="lazy" className="mt-2 max-h-60 w-full object-cover" />
+                          )}
                           <p className="mt-1 flex items-center gap-2 text-xs opacity-70">
                             {mine ? 'Delivered' : 'Received'} {new Date(m.deliverAt).toLocaleTimeString()}
                             {settings.readAloud && !mine && (

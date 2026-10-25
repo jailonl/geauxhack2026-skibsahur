@@ -1,10 +1,12 @@
 // DeepSpace AI: writes bot posts for the feed and replies from the AI operators in direct messages.
 // Worker-only (imported by src/cron.ts and src/actions/index.ts). Calls are billed to the app owner's credits.
 // If an AI call fails, bot posts fall back to the scripted lines in bots.ts.
+// Every prompt that includes text people wrote is protected against prompt injection (see aiSafety.ts).
 import { createDeepSpaceAI } from 'deepspace/worker'
 import { generateText } from 'ai'
 import type { Env } from '../../../worker'
-import { BODY_LABELS, formatDelay, lightDelaySeconds } from '../../lib/space'
+import { BODY_LABELS, formatDelay, lightDelaySeconds, type Place } from '../../lib/space'
+import { SAFETY_RULES, safeName, safeOutput, untrusted } from './aiSafety'
 import { pickPersona, scriptedLine, toBotPost, type BotPost, type Persona } from './bots'
 import type { Colonist } from '../forums/colonists'
 import type { Operator } from '../social/operators'
@@ -22,17 +24,13 @@ export function describeError(err: unknown): string {
 /** Real facts the AI can draw on so posts stay grounded in actual space science. */
 function factSheet(now: number): string {
   return [
-    `Current Earth–Mars one-way light delay: ${formatDelay(lightDelaySeconds('earth', 'mars', now))}.`,
+    `Current Earth–Mars one-way light delay (only applies to messages between Earth and Mars): ${formatDelay(lightDelaySeconds('earth', 'mars', now))}.`,
     'Earth–Moon light delay: about 1.3 seconds.',
     'A Mars day (sol) is 24 h 39 min 35 s. Mars surface pressure is under 1% of Earth\'s.',
     'Mars surface temperatures typically range from about -125 °C to 20 °C.',
     'Curiosity measured about 0.67 mSv/day of radiation on the Mars surface.',
     'The ISS recycles about 98% of its water.',
   ].join('\n')
-}
-
-function clean(text: string, maxLength: number): string {
-  return text.trim().replace(/^["']|["']$/g, '').slice(0, maxLength)
 }
 
 /** One feed post from a random persona, written by DeepSpace AI. Falls back to a scripted line. */
@@ -47,10 +45,10 @@ export async function generateBotPost(env: Env, now: number = Date.now()): Promi
         `You are ${persona.name}, ${persona.voice}. You post short updates to a social feed used by human colonists ` +
         'living off Earth. Write ONE post under 240 characters, in character. No hashtags, no emoji, no quotation marks. ' +
         'Keep it friendly and suitable for all ages. Stay consistent with these real facts when relevant:\n' +
-        factSheet(now),
+        factSheet(now) + '\n\n' + SAFETY_RULES,
       prompt: 'Write your next post. Example of your style: ' + scriptedLine(persona, now),
     })
-    const post = clean(text, 280)
+    const post = safeOutput(text, 280)
     if (post) return toBotPost(persona, post)
     console.warn('[ai] bot post came back empty, using scripted line')
   } catch (err) {
@@ -59,7 +57,7 @@ export async function generateBotPost(env: Env, now: number = Date.now()): Promi
   return toBotPost(persona, scriptedLine(persona, now))
 }
 
-export type ChatLine = { authorName: string; content: string; fromBody: keyof typeof BODY_LABELS }
+export type ChatLine = { authorName: string; content: string; fromBody: Place }
 
 /**
  * An AI operator's in-character reply to a colonist's direct message. `history` is their recent
@@ -74,7 +72,7 @@ export async function generateOperatorReply(
 ): Promise<string | null> {
   try {
     const transcript = history
-      .map((line) => `[${line.authorName}, from ${BODY_LABELS[line.fromBody]}]: ${line.content.slice(0, 300)}`)
+      .map((line) => `[${safeName(line.authorName)}, from ${BODY_LABELS[line.fromBody] ?? 'Earth'}]: ${untrusted(line.content, 300)}`)
       .join('\n')
     const delay = lightDelaySeconds(message.fromBody, operator.body, now)
     const ai = createDeepSpaceAI(env, 'anthropic')
@@ -83,16 +81,19 @@ export async function generateOperatorReply(
       maxOutputTokens: MAX_TOKENS,
       system:
         `You are ${operator.name}, ${operator.voice}, at ${operator.place}, answering a direct message from ` +
-        `a colonist named ${message.authorName}. Their message came from ${BODY_LABELS[message.fromBody]}; ` +
-        `it took ${formatDelay(delay)} to reach you and your reply takes as long to get back. ` +
+        `a colonist named ${safeName(message.authorName)}. Their message came from ${BODY_LABELS[message.fromBody] ?? 'Earth'}. ` +
+        // Same world (or next door): say so plainly, so the model doesn't borrow the Earth–Mars number from the facts.
+        (delay < 2
+          ? 'You are on the same world as them (or right next to it), so messages arrive almost instantly. Do not mention any light delay. '
+          : `It took ${formatDelay(delay)} to reach you and your reply takes exactly as long to get back. Use only this number for the delay. `) +
         'Reply in under 300 characters, in character, helpful and friendly. No emoji. ' +
         'Never claim to be human. Stay consistent with these real facts when relevant:\n' +
-        factSheet(now),
+        factSheet(now) + '\n\n' + SAFETY_RULES,
       prompt:
         (transcript ? `Your recent conversation with them, oldest first:\n${transcript}\n\n` : '') +
-        `New message to answer. ${message.authorName} says: ${message.content}`,
+        `New message to answer. ${safeName(message.authorName)} says: ${untrusted(message.content, 600)}`,
     })
-    const reply = clean(text, 500)
+    const reply = safeOutput(text, 500)
     if (!reply) console.warn(`[ai] operator reply came back empty (finishReason: ${finishReason})`)
     return reply || null
   } catch (err) {
@@ -119,10 +120,10 @@ export async function generateBotReply(
         `You are ${persona.name}, ${persona.voice}. You are replying to a colonist's post on a social feed used by ` +
         'humans living off Earth. Write ONE friendly reply under 200 characters, in character, that responds to what ' +
         'they actually said. No hashtags, no emoji, no quotation marks. Suitable for all ages. Real facts you can use:\n' +
-        factSheet(now),
-      prompt: `@${post.authorName} posted: ${post.text}`,
+        factSheet(now) + '\n\n' + SAFETY_RULES,
+      prompt: `@${safeName(post.authorName)} posted: ${untrusted(post.text, 400)}`,
     })
-    return clean(text, 280) || null
+    return safeOutput(text, 280)
   } catch (err) {
     console.error(`[ai] bot reply failed: ${describeError(err)}`)
     return null
@@ -147,13 +148,15 @@ export async function generateForumThread(
         'Write casual, specific, everyday colonist chatter: a question, a story, a tip, or a small complaint. ' +
         'Reply with exactly two lines: the first line is the title (under 80 characters), the second line is the post ' +
         '(under 300 characters). No emoji, no hashtags, no labels like "Title:". Suitable for all ages. Real facts:\n' +
-        factSheet(now),
+        factSheet(now) + '\n\n' + SAFETY_RULES,
       prompt: 'Write your new thread.',
     })
     const [title, ...rest] = text.trim().split('\n').map((l) => l.trim()).filter(Boolean)
     const body = rest.join(' ')
-    if (!title) return null
-    return { title: clean(title.replace(/^title:\s*/i, ''), 120), text: clean(body.replace(/^(post|body):\s*/i, ''), 600) }
+    const safeTitle = title ? safeOutput(title.replace(/^title:\s*/i, ''), 120) : null
+    const safeBody = safeOutput(body.replace(/^(post|body):\s*/i, ''), 600)
+    if (!safeTitle) return null
+    return { title: safeTitle, text: safeBody ?? '' }
   } catch (err) {
     console.error(`[ai] forum thread failed: ${describeError(err)}`)
     return null
@@ -170,7 +173,7 @@ export async function generateForumComment(
   now: number = Date.now(),
 ): Promise<string | null> {
   try {
-    const transcript = recent.map((c) => `@${c.author}: ${c.text.slice(0, 300)}`).join('\n')
+    const transcript = recent.map((c) => `@${safeName(c.author)}: ${untrusted(c.text, 300)}`).join('\n')
     const ai = createDeepSpaceAI(env, 'anthropic')
     const { text } = await generateText({
       model: ai(MODEL),
@@ -179,12 +182,12 @@ export async function generateForumComment(
         `You are ${colonist.name} (@${colonist.handle}), ${colonist.voice}. You live at ${colonist.home}. ` +
         `You are commenting on a thread in the forum ${forum.name}. Write ONE casual comment under 250 characters that ` +
         'adds to the conversation (answer, joke, story, or follow-up question). No emoji, no hashtags, no quotation ' +
-        'marks. Suitable for all ages. Real facts you can use:\n' + factSheet(now),
+        'marks. Suitable for all ages. Real facts you can use:\n' + factSheet(now) + '\n\n' + SAFETY_RULES,
       prompt:
-        `Thread title: ${thread.title}\n${thread.text ? `Thread post: ${thread.text.slice(0, 500)}\n` : ''}` +
+        `Thread title: ${untrusted(thread.title, 150)}\n${thread.text ? `Thread post: ${untrusted(thread.text, 500)}\n` : ''}` +
         (transcript ? `Latest comments, oldest first:\n${transcript}\n` : '') + 'Write your comment.',
     })
-    return clean(text, 400) || null
+    return safeOutput(text, 400)
   } catch (err) {
     console.error(`[ai] forum comment failed: ${describeError(err)}`)
     return null
