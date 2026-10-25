@@ -1,7 +1,11 @@
-// Vitals rules with no UI: the safety limits, the checks, and the mission radiation total.
-// Every limit comes from a real medical or NASA source (listed in LIMIT_NOTES, shown on the page).
+// Vitals rules with no UI: the safety limits and the checks.
+// Humans (Earth, Moon, station) get real medical limits. Everywhere else you're that world's alien,
+// with its own limits (aliens.ts). Radiation and supply limits depend on the world too
+// (colony.ts), because what's normal on the Moon isn't normal on Earth.
 // Levels: 'ok' (normal), 'caution' (keep an eye on it), 'danger' (act now).
-import { ALL_PLACES, type Place } from '../../lib/space'
+import { BODY_LABELS, type Place } from '../../lib/space'
+import { alienFor, type Band } from './aliens'
+import { CAREER_LIMIT_MSV, PLACE_INFO, checkSupply, radiationLimits, supplyLimits } from './colony'
 import type { Check, Level, VitalKey, Vitals, VitalsRecord } from './types'
 
 // ---- The limits ----------------------------------------------------------------
@@ -25,35 +29,9 @@ export const BLOOD_PRESSURE = {
 // Body temperature, °C. Fever is 38.0+. 40.0+ is heat stroke range. Under 35.0 is hypothermia.
 export const TEMPERATURE = { dangerLow: 35.0, cautionLow: 36.0, cautionHigh: 38.0, dangerHigh: 40.0 }
 
-// Radiation dose in one day, mSv.
-// 1.84 mSv/day is what Curiosity's RAD measured in deep space on the way to Mars, so more than that
-// means something unusual. 8.3 mSv/day is the pace that would use up NASA's old 30-day limit
-// (250 mSv in 30 days) — usually a solar storm, so get to the shelter.
-export const RADIATION_DAY = { caution: 1.84, danger: 8.3 }
-
-// Total radiation for the mission, mSv. NASA's career limit is 600 mSv (NASA-STD-3001, 2022).
-// Caution at 80% of it.
-export const CAREER_LIMIT_MSV = 600
-export const MISSION_DOSE = { caution: CAREER_LIMIT_MSV * 0.8, danger: CAREER_LIMIT_MSV }
-
-// Supplies, days left. Colony rule (not a medical limit): order more under 30 days, emergency under 7.
-export const SUPPLY_DAYS = { caution: 30, danger: 7 }
-
-// Typical daily dose by world, mSv/day. Used by the "Read sensors" demo and shown for comparison.
-// Measured: Earth ~2.4 mSv/year world average. Station: ISS, ~0.5/day. Moon: Chang'e 4 measured 1.37/day.
-// Mars: Curiosity measured 0.64/day on the surface.
-// Everywhere else there's no surface measurement, so we use the deep-space level Curiosity measured
-// on the way to Mars (1.84/day). Real surfaces can be far worse (Europa's is thousands of mSv a day
-// from Jupiter's belts), which is why colonies there would live under ice or rock.
-export const DEEP_SPACE_DOSE = 1.84
-const MEASURED_DOSE = { earth: 0.0066, station: 0.5, moon: 1.37, mars: 0.64 } as const
-export const DOSE_MEASURED: ReadonlySet<Place> = new Set(Object.keys(MEASURED_DOSE) as Place[])
-export const BACKGROUND_DOSE: Record<Place, number> = Object.fromEntries(
-  ALL_PLACES.map((p) => [p, (MEASURED_DOSE as Record<string, number>)[p] ?? DEEP_SPACE_DOSE]),
-) as Record<Place, number>
-
 // ---- What each number field is, and what values are possible at all ------------
-// min/max here catch typos (a heart rate of 700), not health problems.
+// min/max here catch typos (a human heart rate of 700), not health problems. Aliens get much wider
+// ranges, since a Pyrrax runs at 400 °C and a Nivvik's heart beats once a minute or less.
 
 export type FieldInfo = { key: VitalKey; label: string; unit: string; min: number; max: number; step: number }
 
@@ -63,11 +41,31 @@ export const FIELDS: Record<VitalKey, FieldInfo> = {
   systolic: { key: 'systolic', label: 'Systolic', unit: 'mmHg', min: 50, max: 260, step: 1 },
   diastolic: { key: 'diastolic', label: 'Diastolic', unit: 'mmHg', min: 30, max: 160, step: 1 },
   temperature: { key: 'temperature', label: 'Body temperature', unit: '°C', min: 30, max: 45, step: 0.1 },
+  // Filled in from the colony, not typed (see colony.ts)
   radiation: { key: 'radiation', label: 'Radiation today', unit: 'mSv', min: 0, max: 5000, step: 0.01 },
-  oxygenDays: { key: 'oxygenDays', label: 'Oxygen', unit: 'days', min: 0, max: 3650, step: 1 },
-  waterDays: { key: 'waterDays', label: 'Water', unit: 'days', min: 0, max: 3650, step: 1 },
-  foodDays: { key: 'foodDays', label: 'Food', unit: 'days', min: 0, max: 3650, step: 1 },
+  oxygenDays: { key: 'oxygenDays', label: 'Oxygen', unit: 'days', min: 0, max: 100000, step: 1 },
+  waterDays: { key: 'waterDays', label: 'Water', unit: 'days', min: 0, max: 100000, step: 1 },
+  foodDays: { key: 'foodDays', label: 'Food', unit: 'days', min: 0, max: 100000, step: 1 },
 }
+
+const ALIEN_RANGES: Partial<Record<VitalKey, { min: number; max: number; step: number }>> = {
+  heartRate: { min: 0, max: 2000, step: 0.1 },
+  spo2: { min: 0, max: 100, step: 1 },
+  systolic: { min: 0, max: 2000, step: 1 },
+  diastolic: { min: 0, max: 2000, step: 1 },
+  temperature: { min: -273, max: 1000, step: 0.1 }, // nothing is colder than absolute zero
+}
+
+/** The field as it applies on a world: aliens get their own label for blood gas and wider ranges. */
+export function fieldFor(key: VitalKey, place: Place): FieldInfo {
+  const alien = alienFor(place)
+  const base = FIELDS[key]
+  if (!alien || !ALIEN_RANGES[key]) return base
+  return { ...base, ...ALIEN_RANGES[key], label: key === 'spo2' ? alien.gasName : base.label }
+}
+
+/** The numbers a colonist types in. Radiation and supplies come from the colony. */
+export const HEALTH_KEYS: VitalKey[] = ['heartRate', 'spo2', 'systolic', 'diastolic', 'temperature']
 
 export const VITAL_KEYS = Object.keys(FIELDS) as VitalKey[]
 
@@ -113,24 +111,38 @@ export function checkTemperature(celsius: number): Check {
   return OK()
 }
 
-export function checkRadiationDay(mSv: number): Check {
-  if (mSv > RADIATION_DAY.danger) return { level: 'danger', reason: 'Solar storm levels: go to the shelter' }
-  if (mSv > RADIATION_DAY.caution) return { level: 'caution', reason: `Above deep-space level (${RADIATION_DAY.caution} mSv/day)` }
-  return OK('Normal background')
+const fmtNum = (n: number) => (Math.abs(n) >= 10 || Number.isInteger(n) ? String(Math.round(n * 10) / 10) : n.toFixed(1))
+
+/** Alien check: inside the normal band is fine, the next zone out is a warning, past that is danger. */
+export function checkBand(value: number, b: Band, unit: string, words: { low: string; high: string }): Check {
+  const u = unit === '%' ? '%' : ` ${unit}`
+  if (value < b.dangerLow) return { level: 'danger', reason: `Under ${fmtNum(b.dangerLow)}${u}: dangerously ${words.low}` }
+  if (value > b.dangerHigh) return { level: 'danger', reason: `Over ${fmtNum(b.dangerHigh)}${u}: dangerously ${words.high}` }
+  if (value < b.cautionLow) return { level: 'caution', reason: `Under ${fmtNum(b.cautionLow)}${u}: ${words.low}` }
+  if (value > b.cautionHigh) return { level: 'caution', reason: `Over ${fmtNum(b.cautionHigh)}${u}: ${words.high}` }
+  return OK()
 }
 
-export function checkMissionDose(mSv: number): Check {
-  const pct = Math.round((mSv / CAREER_LIMIT_MSV) * 100)
-  if (mSv >= MISSION_DOSE.danger) return { level: 'danger', reason: `At NASA's ${CAREER_LIMIT_MSV} mSv career limit` }
-  if (mSv >= MISSION_DOSE.caution) return { level: 'caution', reason: `${pct}% of NASA's career limit` }
-  return OK(`${pct}% of NASA's career limit`)
+/** Today's dose against the limits for this world (and this species). */
+export function checkRadiationDay(mSv: number, place: Place): Check {
+  const alien = alienFor(place)
+  const l = alien ? alien.radiation : radiationLimits(place)
+  if (mSv > l.danger) return { level: 'danger', reason: `Over ${l.danger} mSv: storm levels, get to the shelter` }
+  if (mSv > l.caution) return { level: 'caution', reason: `Over ${l.caution} mSv: above normal for ${BODY_LABELS[place]}` }
+  return OK('Normal for ' + BODY_LABELS[place])
 }
 
-export function checkSupply(days: number): Check {
-  if (days < SUPPLY_DAYS.danger) return { level: 'danger', reason: `Under ${SUPPLY_DAYS.danger} days left: emergency` }
-  if (days < SUPPLY_DAYS.caution) return { level: 'caution', reason: `Under ${SUPPLY_DAYS.caution} days left: resupply soon` }
-  return OK('Stocked')
+export function checkMissionDose(mSv: number, place: Place): Check {
+  const alien = alienFor(place)
+  const limit = alien ? alien.careerDose : CAREER_LIMIT_MSV
+  const whose = alien ? `the ${alien.name} lifetime limit` : `NASA's career limit`
+  const pct = Math.round((mSv / limit) * 100)
+  if (mSv >= limit) return { level: 'danger', reason: `At ${whose} (${limit} mSv)` }
+  if (mSv >= limit * 0.8) return { level: 'caution', reason: `${pct}% of ${whose}` }
+  return OK(`${pct}% of ${whose}`)
 }
+
+export { checkSupply }
 
 /** The level in words (shown next to or instead of the 8-bit heart). */
 export const LEVEL_TEXT: Record<Level, string> = { ok: 'Good', caution: 'Warning', danger: 'Danger' }
@@ -143,25 +155,6 @@ export function worst(levels: Level[]): Level {
 }
 
 // ---- Putting readings together -----------------------------------------------------
-
-/**
- * Total mission radiation in mSv. Readings are "dose today", so if you log twice in one day
- * only the latest reading for that day counts (otherwise the same day would be added twice).
- */
-export function missionDose(records: Pick<VitalsRecord, 'data' | 'createdAt'>[]): number {
-  const perDay = new Map<string, { at: number; mSv: number }>()
-  for (const r of records) {
-    const mSv = r.data.radiation
-    if (mSv == null || !Number.isFinite(mSv)) continue
-    const at = Date.parse(r.createdAt)
-    const day = new Date(at).toISOString().slice(0, 10) // UTC date, e.g. "2026-10-24"
-    const seen = perDay.get(day)
-    if (!seen || at > seen.at) perDay.set(day, { at, mSv })
-  }
-  let total = 0
-  for (const d of perDay.values()) total += d.mSv
-  return total
-}
 
 /** Newest value of a field across readings (null if never logged), with when it was logged. */
 export function latest(records: VitalsRecord[], key: VitalKey): { value: number; at: string } | null {
@@ -183,34 +176,52 @@ export function history(records: VitalsRecord[], key: VitalKey, count = 12): num
     .map((r) => r.data[key] as number)
 }
 
+export type ReadingRow = { label: string; value: string; check: Check }
+
 /** Every check that applies to one reading (only for fields that were filled in), with the value as text. */
-export function checkReading(v: Vitals): { label: string; value: string; check: Check }[] {
-  const out: { label: string; value: string; check: Check }[] = []
-  if (v.heartRate != null) out.push({ label: 'Heart rate', value: `${v.heartRate} bpm`, check: checkHeartRate(v.heartRate) })
-  if (v.spo2 != null) out.push({ label: 'Blood oxygen', value: `${v.spo2}%`, check: checkSpo2(v.spo2) })
-  if (v.systolic != null && v.diastolic != null) {
-    out.push({ label: 'Blood pressure', value: `${v.systolic}/${v.diastolic} mmHg`, check: checkBloodPressure(v.systolic, v.diastolic) })
+export function checkReading(v: Vitals): ReadingRow[] {
+  const place: Place = v.body ?? 'earth'
+  const alien = alienFor(place)
+  const out: ReadingRow[] = []
+  const bp = v.systolic != null && v.diastolic != null
+
+  if (alien) {
+    const a = alien
+    if (v.heartRate != null) out.push({ label: 'Heart rate', value: `${v.heartRate} bpm`, check: checkBand(v.heartRate, a.heartRate, 'bpm', { low: 'slow', high: 'fast' }) })
+    if (v.spo2 != null) out.push({ label: a.gasName, value: `${v.spo2}%`, check: checkBand(v.spo2, a.gas, '%', { low: 'low', high: 'high' }) })
+    if (bp) {
+      const s = checkBand(v.systolic!, a.systolic, 'mmHg', { low: 'low top pressure', high: 'high top pressure' })
+      const d = checkBand(v.diastolic!, a.diastolic, 'mmHg', { low: 'low bottom pressure', high: 'high bottom pressure' })
+      out.push({ label: 'Body pressure', value: `${v.systolic}/${v.diastolic} mmHg`, check: worst([s.level, d.level]) === s.level ? s : d })
+    }
+    if (v.temperature != null) out.push({ label: 'Temperature', value: `${v.temperature.toFixed(1)} °C`, check: checkBand(v.temperature, a.temperature, '°C', { low: 'cold', high: 'hot' }) })
+  } else {
+    if (v.heartRate != null) out.push({ label: 'Heart rate', value: `${v.heartRate} bpm`, check: checkHeartRate(v.heartRate) })
+    if (v.spo2 != null) out.push({ label: 'Blood oxygen', value: `${v.spo2}%`, check: checkSpo2(v.spo2) })
+    if (bp) out.push({ label: 'Blood pressure', value: `${v.systolic}/${v.diastolic} mmHg`, check: checkBloodPressure(v.systolic!, v.diastolic!) })
+    if (v.temperature != null) out.push({ label: 'Temperature', value: `${v.temperature.toFixed(1)} °C`, check: checkTemperature(v.temperature) })
   }
-  if (v.temperature != null) out.push({ label: 'Temperature', value: `${v.temperature.toFixed(1)} °C`, check: checkTemperature(v.temperature) })
-  if (v.radiation != null) out.push({ label: 'Radiation today', value: `${v.radiation} mSv`, check: checkRadiationDay(v.radiation) })
-  if (v.oxygenDays != null) out.push({ label: 'Oxygen', value: `${v.oxygenDays} days`, check: checkSupply(v.oxygenDays) })
-  if (v.waterDays != null) out.push({ label: 'Water', value: `${v.waterDays} days`, check: checkSupply(v.waterDays) })
-  if (v.foodDays != null) out.push({ label: 'Food', value: `${v.foodDays} days`, check: checkSupply(v.foodDays) })
+
+  if (v.radiation != null) out.push({ label: 'Radiation today', value: `${v.radiation} mSv`, check: checkRadiationDay(v.radiation, place) })
+  if (v.oxygenDays != null) out.push({ label: 'Oxygen', value: `${v.oxygenDays} days`, check: checkSupply(v.oxygenDays, place) })
+  if (v.waterDays != null) out.push({ label: 'Water', value: `${v.waterDays} days`, check: checkSupply(v.waterDays, place) })
+  if (v.foodDays != null) out.push({ label: 'Food', value: `${v.foodDays} days`, check: checkSupply(v.foodDays, place) })
   return out
 }
 
 /** Returns an error message for the form, or null if the reading can be saved. */
 export function readingProblem(v: Vitals): string | null {
-  const filled = VITAL_KEYS.filter((k) => v[k] != null)
+  const place: Place = v.body ?? 'earth'
+  const filled = HEALTH_KEYS.filter((k) => v[k] != null)
   if (filled.length === 0) return 'Fill in at least one reading.'
   for (const k of filled) {
     const value = v[k] as number
-    const f = FIELDS[k]
+    const f = fieldFor(k, place)
     if (!Number.isFinite(value)) return `${f.label} must be a number.`
     if (value < f.min || value > f.max) return `${f.label} should be between ${f.min} and ${f.max} ${f.unit}.`
   }
-  if ((v.systolic == null) !== (v.diastolic == null)) return 'Blood pressure needs both numbers (like 120 / 80).'
-  if (v.systolic != null && v.diastolic != null && v.systolic <= v.diastolic) {
+  if ((v.systolic == null) !== (v.diastolic == null)) return 'Pressure needs both numbers (like 120 / 80).'
+  if (!alienFor(place) && v.systolic != null && v.diastolic != null && v.systolic <= v.diastolic) {
     return 'The first blood pressure number (systolic) should be higher than the second.'
   }
   return null
@@ -218,12 +229,97 @@ export function readingProblem(v: Vitals): string | null {
 
 // ---- Shown on the page under "Safety limits" ----------------------------------------
 
-export const LIMIT_NOTES: { name: string; normal: string; caution: string; danger: string; source: string }[] = [
-  { name: 'Heart rate (resting)', normal: '50–100 bpm', caution: '40–49 or 101–130', danger: '<40 or >130', source: 'American Heart Association' },
-  { name: 'Blood oxygen', normal: '95–100%', caution: '90–94%', danger: '<90%', source: 'Hypoxemia threshold' },
-  { name: 'Blood pressure', normal: 'under 130 and under 80', caution: 'top ≥130, bottom ≥80, or <90/60', danger: '>180/120', source: '2017 ACC/AHA guideline' },
-  { name: 'Temperature', normal: '36.0–37.9 °C', caution: '35.0–35.9 or 38.0–39.9', danger: '<35.0 or ≥40.0', source: 'Fever / hypothermia / heat stroke' },
-  { name: 'Radiation (day)', normal: '≤1.84 mSv', caution: '1.84–8.3 mSv', danger: '>8.3 mSv', source: 'Curiosity RAD; NASA 30-day limit pace' },
-  { name: 'Radiation (mission)', normal: '<480 mSv', caution: '480–599 mSv', danger: '≥600 mSv', source: 'NASA-STD-3001 career limit' },
-  { name: 'Oxygen / water / food', normal: '≥30 days', caution: '7–29 days', danger: '<7 days', source: 'Colony resupply rule' },
-]
+export type LimitNote = { name: string; normal: string; caution: string; danger: string; source: string }
+
+const r = (n: number) => fmtNum(n)
+function bandNote(name: string, b: Band, unit: string, source: string): LimitNote {
+  const u = unit === '%' ? '%' : ` ${unit}`
+  return {
+    name,
+    normal: `${r(b.cautionLow)}–${r(b.cautionHigh)}${u}`,
+    caution: `${r(b.dangerLow)}–${r(b.cautionLow)} or ${r(b.cautionHigh)}–${r(b.dangerHigh)}`,
+    danger: `<${r(b.dangerLow)} or >${r(b.dangerHigh)}`,
+    source,
+  }
+}
+
+/** The limits that apply on a world, for whoever lives there. */
+export function limitNotes(place: Place): LimitNote[] {
+  const alien = alienFor(place)
+  const rad = alien ? alien.radiation : radiationLimits(place)
+  const career = alien ? alien.careerDose : CAREER_LIMIT_MSV
+  const sup = supplyLimits(place)
+  const info = PLACE_INFO[place]
+  const health: LimitNote[] = alien
+    ? [
+        bandNote('Heart rate', alien.heartRate, 'bpm', `${alien.name} biology`),
+        bandNote(alien.gasName, alien.gas, '%', `${alien.name} biology`),
+        bandNote('Body pressure (top)', alien.systolic, 'mmHg', `${alien.name} biology`),
+        bandNote('Body pressure (bottom)', alien.diastolic, 'mmHg', `${alien.name} biology`),
+        bandNote('Temperature', alien.temperature, '°C', `${alien.name} biology`),
+      ]
+    : [
+        { name: 'Heart rate (resting)', normal: '50–100 bpm', caution: '40–49 or 101–130', danger: '<40 or >130', source: 'American Heart Association' },
+        { name: 'Blood oxygen', normal: '95–100%', caution: '90–94%', danger: '<90%', source: 'Hypoxemia threshold' },
+        { name: 'Blood pressure', normal: 'under 130 and under 80', caution: 'top ≥130, bottom ≥80, or <90/60', danger: '>180/120', source: '2017 ACC/AHA guideline' },
+        { name: 'Temperature', normal: '36.0–37.9 °C', caution: '35.0–35.9 or 38.0–39.9', danger: '<35.0 or ≥40.0', source: 'Fever / hypothermia / heat stroke' },
+      ]
+  return [
+    ...health,
+    {
+      name: 'Radiation (day)', normal: `≤${rad.caution} mSv`, caution: `${rad.caution}–${rad.danger} mSv`, danger: `>${rad.danger} mSv`,
+      source: alien ? `${alien.name} biology` : `Normal here: ~${info.dose} mSv (${info.doseNote}); danger = NASA 30-day limit pace`,
+    },
+    {
+      name: 'Radiation (lifetime)', normal: `<${r(career * 0.8)} mSv`, caution: `${r(career * 0.8)}–${r(career)} mSv`, danger: `≥${r(career)} mSv`,
+      source: alien ? `${alien.name} biology` : 'NASA-STD-3001 career limit',
+    },
+    {
+      name: 'Oxygen / water / food', normal: `≥${sup.caution} days`, caution: `${sup.danger}–${sup.caution - 1} days`, danger: `<${sup.danger} days`,
+      source: info.trip == null ? info.tripNote : `Emergency cargo takes ${info.trip} day${info.trip === 1 ? '' : 's'} (${info.tripNote})`,
+    },
+  ]
+}
+
+// ---- Survival rating -----------------------------------------------------------------
+
+export type Survival = {
+  score: number // chance of survival, 0–100 (%)
+  label: 'Thriving' | 'Stable' | 'At risk' | 'Critical'
+  summary: string
+  steps: { label: string; value: string; level: Level; chance: number; reason: string }[]
+}
+
+/** Chance of getting through each reading's problem, in %. */
+export const SURVIVAL_CHANCE: Record<Level, number> = { ok: 100, caution: 92, danger: 45 }
+
+/** Turns a chance into the words shown next to it. */
+export const SURVIVAL_BANDS = { thriving: 95, stable: 80, atRisk: 50 } as const
+
+/**
+ * Survival rating: the likelihood (%) you're fine, given everything you logged. Each reading has its own
+ * chance of survival (good 100%, warning 92%, danger 45%), and any one of them could go wrong on its own,
+ * so the chances multiply. One warning gives 92%, two give 85%, one danger gives 45%, and a warning plus
+ * a danger gives 41%.
+ */
+export function survivalRating(rows: ReadingRow[]): Survival {
+  const steps = rows.map((r) => ({
+    label: r.label, value: r.value, level: r.check.level, chance: SURVIVAL_CHANCE[r.check.level], reason: r.check.reason,
+  }))
+  const product = steps.reduce((p, s) => p * (s.chance / 100), 1)
+  const score = Math.round(product * 100)
+  const b = SURVIVAL_BANDS
+  const label = score >= b.thriving ? 'Thriving' : score >= b.stable ? 'Stable' : score >= b.atRisk ? 'At risk' : 'Critical'
+  const summary = steps.length === 0
+    ? 'No readings yet.'
+    : {
+        Thriving: 'Everything is where it should be.',
+        Stable: 'Likely fine, but keep an eye on the warnings.',
+        'At risk': 'Several things are off. Fix the warnings soon.',
+        Critical: 'Something is dangerous. Deal with the red readings now.',
+      }[label]
+  return { score, label, summary, steps }
+}
+
+/** "92%", or "<1%" when it rounds down to nothing. */
+export const formatChance = (score: number) => (score === 0 ? '<1%' : `${score}%`)

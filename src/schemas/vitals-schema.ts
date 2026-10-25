@@ -22,10 +22,9 @@ export const vitalsSchema: CollectionSchema = {
     { name: 'diastolic', storage: 'number', interpretation: 'plain' }, // blood pressure, mmHg
     { name: 'temperature', storage: 'number', interpretation: 'plain' }, // body temperature, °C
 
-    // Exposure
+    // Colony numbers, copied in automatically when you save (see src/features/vitals/colony.ts)
     { name: 'radiation', storage: 'number', interpretation: 'plain' }, // dose received today, mSv
 
-    // Supplies: days left at the current use rate
     { name: 'oxygenDays', storage: 'number', interpretation: 'plain' },
     { name: 'waterDays', storage: 'number', interpretation: 'plain' },
     { name: 'foodDays', storage: 'number', interpretation: 'plain' },
