@@ -2,7 +2,7 @@
 // New accounts see this before they can post; it's also the /profile page.
 import { useState } from 'react'
 import { useMutations, useR2Files } from 'deepspace'
-import { BODY_LABELS, type Body } from '../../lib/space'
+import { BODY_LABELS, PLACE_GROUPS, type Place } from '../../lib/space'
 import UserAvatar from './UserAvatar'
 import { ACCENTS, DEFAULT_ACCENT, usernameProblem, type Profile, type ProfileRecord } from './profiles'
 
@@ -15,7 +15,7 @@ export default function ProfileEditor({ existing, onSaved }: { existing: Profile
   const [username, setUsername] = useState(existing?.username ?? '')
   const [displayName, setDisplayName] = useState(existing?.displayName ?? '')
   const [bio, setBio] = useState(existing?.bio ?? '')
-  const [homeBody, setHomeBody] = useState<Body>(existing?.homeBody ?? 'earth')
+  const [homeBody, setHomeBody] = useState<Place>(existing?.homeBody ?? 'earth')
   const [accent, setAccent] = useState(existing?.accent ?? DEFAULT_ACCENT)
   const [avatarKey, setAvatarKey] = useState(existing?.avatarKey)
   const [error, setError] = useState('')
@@ -126,14 +126,18 @@ export default function ProfileEditor({ existing, onSaved }: { existing: Profile
       </label>
 
       <label className="block text-sm">
-        Home planet <span className="text-muted-foreground">(sets the light-delay on your messages)</span>
+        Home world <span className="text-muted-foreground">(sets the light-delay on your messages)</span>
         <select
           value={homeBody}
-          onChange={(e) => setHomeBody(e.target.value as Body)}
+          onChange={(e) => setHomeBody(e.target.value as Place)}
           className="mt-1 block rounded-md border bg-background p-2"
         >
-          {(Object.keys(BODY_LABELS) as Body[]).map((b) => (
-            <option key={b} value={b}>{BODY_LABELS[b]}</option>
+          {PLACE_GROUPS.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.places.map((p) => (
+                <option key={p} value={p}>{BODY_LABELS[p]}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </label>

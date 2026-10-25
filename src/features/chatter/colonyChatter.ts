@@ -5,10 +5,13 @@
 import type { Body } from '../../lib/space'
 import { hash, pick, seededRandom } from '../aliens/alienLang'
 import { expand, type Grammar } from '../aliens/generator'
+import { botImageFor } from '../comms/botImages'
 import { findColonist, type Colonist } from '../forums/colonists'
+
+type BotPicture = { mediaKey: string; mediaType: string; mediaAlt: string }
 import { SLOT_MS, collect } from './stream'
 
-export type ColonyPost = { id: string; at: number; world: Body; colonist: Colonist; text: string }
+export type ColonyPost = { id: string; at: number; world: Body; colonist: Colonist; text: string; image: BotPicture | null }
 
 const WORLDS: Body[] = ['mars', 'moon', 'earth', 'station']
 
@@ -91,7 +94,9 @@ export function colonyPostForSlot(slot: number): ColonyPost | null {
   const colonist = findColonist(pick(POSTERS[world], random))
   if (!colonist) return null
   const grammar: Grammar = { ...SHARED, ...WORLD_WORDS[world], sol: [String(400 + (slot % 300))] }
-  return { id: `colony-${slot}`, at: slot * SLOT_MS, world, colonist, text: expand('#origin#', grammar, random) }
+  const text = expand('#origin#', grammar, random)
+  // Sometimes attach one of the team's pictures (src/features/comms/botImages.ts).
+  return { id: `colony-${slot}`, at: slot * SLOT_MS, world, colonist, text, image: botImageFor(world, random) }
 }
 
 /** Recent colony posts: at least `perWorld` for every world, so each feed tab has something. */

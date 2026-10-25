@@ -5,7 +5,7 @@ import { memo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useR2Files } from 'deepspace'
 import { Heart, ImageOff, MessageCircle, Quote, Repeat2, Trash2, Volume2 } from 'lucide-react'
-import { BODY_LABELS, PLANET_COLORS, formatDelay, lightDelaySeconds, type Body } from '../../lib/space'
+import { BODY_LABELS, PLANET_COLORS, formatDelay, lightDelaySeconds, type Place } from '../../lib/space'
 import { speak, useSettings } from '../settings/settings'
 import UserAvatar from '../social/UserAvatar'
 import { useMyProfile, type Profiles } from '../social/profiles'
@@ -64,6 +64,8 @@ function Media({ mediaKey, mediaType, alt, compact }: { mediaKey: string; mediaT
   const [loaded, setLoaded] = useState(!bandwidthSaver)
   const isVideo = mediaType?.startsWith('video/')
   const height = compact ? 'max-h-56' : 'max-h-[28rem]'
+  // Uploads are stored in DeepSpace files; bot pictures are plain files in public/bot-images/ (key starts with "/").
+  const src = mediaKey.startsWith('/') ? mediaKey : getUrl(mediaKey)
 
   if (!loaded) {
     return (
@@ -78,9 +80,9 @@ function Media({ mediaKey, mediaType, alt, compact }: { mediaKey: string; mediaT
     )
   }
   return isVideo ? (
-    <video src={getUrl(mediaKey)} controls preload="metadata" className={`mt-3 w-full rounded-xl ${height}`} aria-label={alt} />
+    <video src={src} controls preload="metadata" className={`mt-3 w-full rounded-xl ${height}`} aria-label={alt} />
   ) : (
-    <img src={getUrl(mediaKey)} alt={alt ?? ''} loading="lazy" decoding="async" className={`mt-3 w-full rounded-xl object-cover ${height}`} />
+    <img src={src} alt={alt ?? ''} loading="lazy" decoding="async" className={`mt-3 w-full rounded-xl object-cover ${height}`} />
   )
 }
 
@@ -104,7 +106,7 @@ function PostCard(props: Props) {
   const avatarSize = compact ? 32 : 44
 
   const origin = originOf(post, profiles)
-  const myHome: Body = me?.homeBody ?? 'earth'
+  const myHome: Place = me?.homeBody ?? 'earth'
   const delay = origin ? lightDelaySeconds(origin, myHome) : 0
   const originColor = isAlien ? '#a855f7' : origin ? PLANET_COLORS[origin] : '#64748b'
 

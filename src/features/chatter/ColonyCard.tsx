@@ -1,7 +1,8 @@
 // One colony chatter post in the feed: the same transmission look as a person's post (origin strip with
 // the light delay to you), but read-only and badged "Bot".
 import { memo } from 'react'
-import { BODY_LABELS, PLANET_COLORS, formatDelay, lightDelaySeconds, type Body } from '../../lib/space'
+import { BODY_LABELS, PLANET_COLORS, formatDelay, lightDelaySeconds, type Place } from '../../lib/space'
+import { useSettings } from '../settings/settings'
 import UserAvatar from '../social/UserAvatar'
 import type { ColonyPost } from './colonyChatter'
 
@@ -13,10 +14,11 @@ function secondsAgo(at: number): string {
   return `${Math.floor(s / 3600)}h ago`
 }
 
-function ColonyCard({ post, myHome }: { post: ColonyPost; myHome: Body }) {
+function ColonyCard({ post, myHome }: { post: ColonyPost; myHome: Place }) {
   const color = PLANET_COLORS[post.world]
   const delay = lightDelaySeconds(post.world, myHome, post.at)
   const c = post.colonist
+  const { bandwidthSaver } = useSettings()
 
   return (
     <article className="border border-border bg-card">
@@ -39,6 +41,9 @@ function ColonyCard({ post, myHome }: { post: ColonyPost; myHome: Body }) {
             <span className="ml-auto text-sm text-muted-foreground">{secondsAgo(post.at)}</span>
           </header>
           <p className="font-post mt-1 text-[1.05rem] break-words">{post.text}</p>
+          {post.image && !bandwidthSaver && (
+            <img src={post.image.mediaKey} alt={post.image.mediaAlt} loading="lazy" decoding="async" className="mt-3 max-h-72 w-full object-cover" />
+          )}
         </div>
       </div>
     </article>

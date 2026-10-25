@@ -3,6 +3,7 @@
 // The scripted lines below are the fallback if an AI call fails, so the feed never goes quiet.
 // This file must stay free of React/browser code because the worker imports it.
 import { earthMarsDistanceAU, formatDelay, lightDelaySeconds, type Body } from '../../lib/space'
+import { botImageFor } from './botImages'
 
 export type BotKind = 'system' | 'alien'
 
@@ -13,6 +14,9 @@ export type BotPost = {
   body?: Body
   lat?: number
   lng?: number
+  mediaKey?: string // a picture from public/bot-images/ (see botImages.ts)
+  mediaType?: string
+  mediaAlt?: string
 }
 
 export type Persona = {
@@ -137,13 +141,15 @@ export function scriptedLine(persona: Persona, now: number = Date.now()): string
   return typeof line === 'function' ? line(now) : line
 }
 
-/** Turn a persona + text into a feed post (adds the persona's name, badge type, and location tag). */
+/** Turn a persona + text into a feed post (adds the persona's name, badge type, location tag, and sometimes
+ * one of the team's pictures). */
 export function toBotPost(persona: Persona, text: string): BotPost {
   return {
     text,
     authorName: persona.name,
     botKind: persona.kind,
     ...(persona.location ?? {}),
+    ...(botImageFor(persona.location?.body) ?? {}),
   }
 }
 

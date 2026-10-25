@@ -2,6 +2,7 @@
 // Usernames are unique, enforced by the server. userId is filled in by the server with the signed-in
 // user's id, so nobody can create a profile for someone else.
 import type { CollectionSchema } from 'deepspace/schema'
+import { ALL_PLACES } from '../lib/space'
 
 const EDITABLE = ['username', 'displayName', 'bio', 'homeBody', 'avatarKey', 'accent']
 
@@ -15,7 +16,7 @@ export const profilesSchema: CollectionSchema = {
     {
       name: 'homeBody',
       storage: 'text',
-      interpretation: { kind: 'select', options: ['earth', 'moon', 'mars', 'station'] },
+      interpretation: { kind: 'select', options: ALL_PLACES }, // every place in src/lib/space.ts
       default: 'earth',
     },
     { name: 'avatarKey', storage: 'text', interpretation: 'plain' }, // uploaded profile picture

@@ -60,7 +60,7 @@
   --color-secondary: #20254a;
   --color-secondary-foreground: #eceaf6;
   --color-muted: #20254a;
-  --color-muted-foreground: #9b9dba;
+  --color-muted-foreground: #b6b8d6; /* bright enough to read in the pixel font */
   --color-accent: #262c57;
   --color-accent-foreground: #eceaf6;
   --color-destructive: #ff6b6b;

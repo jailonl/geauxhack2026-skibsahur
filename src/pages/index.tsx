@@ -13,44 +13,25 @@ import Starfield from '../features/home/Starfield'
 import { latestAliens } from '../features/aliens/latest'
 import { useSlotClock } from '../features/chatter/stream'
 import { applySettings } from '../features/settings/settings'
+import SignalMap from '../features/signals/SignalMap'
 import { SignInButtons } from '../features/social/SignIn'
-import { formatDelay, formatLongDelay, earthToOuterPlanetSeconds, lightDelaySeconds, PROXIMA_SECONDS } from '../lib/space'
 import { seo } from '../seo'
 
 const FEATURES = [
   { to: '/home', title: 'Feed', text: 'Post photos, videos, and reports tagged with where you are. Every post shows how long its signal took to arrive.' },
-  { to: '/forums', title: 'Forums', text: 'Sixteen boards for every world and topic, from p/Mars to p/SpaceKitchen.' },
+  { to: '/forums', title: 'Forums', text: 'Boards for every world and topic, from p/Mars to p/SpaceKitchen, including threads about places on the map.' },
   { to: '/messages', title: 'Messages', text: 'Direct messages that travel at the speed of light. Mars is minutes away; plan for it.' },
   { to: '/map', title: 'Map', text: 'Hazards and points of interest marked on real NASA terrain.' },
 ]
+
+// Each section sits on a solid panel so its text stays readable over the starfield.
+const PANEL = 'bg-background/95 p-4 sm:p-6'
 
 const STEPS = [
   'Sign in with GitHub or Google. Your first sign-in creates your account.',
   'Pick a @username and the world you live on.',
   'Post, reply, message other colonists, and listen in on the aliens.',
 ]
-
-/** Live numbers: how far away everyone is right now (browser only). */
-function LiveDelays() {
-  const now = Date.now()
-  const rows = [
-    { label: 'Earth to Moon', value: formatDelay(lightDelaySeconds('earth', 'moon', now)) },
-    { label: 'Earth to Mars', value: formatDelay(lightDelaySeconds('earth', 'mars', now)) },
-    { label: 'Earth to Europa', value: formatLongDelay(earthToOuterPlanetSeconds('jupiter', now)) },
-    { label: 'Earth to Titan', value: formatLongDelay(earthToOuterPlanetSeconds('saturn', now)) },
-    { label: 'Earth to Proxima b', value: formatLongDelay(PROXIMA_SECONDS) },
-  ]
-  return (
-    <ul className="grid gap-2 sm:grid-cols-5">
-      {rows.map((r) => (
-        <li key={r.label} className="border border-border bg-card px-3 py-2">
-          <span className="block text-sm text-muted-foreground">{r.label}</span>
-          <span className="font-signal block text-xl text-primary">{r.value}</span>
-        </li>
-      ))}
-    </ul>
-  )
-}
 
 /** The three newest alien transmissions, updating every few seconds (browser only). */
 function AlienTicker() {
@@ -103,9 +84,9 @@ export default function Landing() {
         </header>
 
         <section aria-labelledby="title" className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-          <p className="font-signal mb-4 text-lg text-muted-foreground">&gt; INCOMING TRANSMISSION</p>
+          <p className="font-signal mb-4 bg-background/90 px-2 text-lg text-muted-foreground">&gt; INCOMING TRANSMISSION</p>
           <h1 id="title" className="font-display text-5xl leading-none text-primary sm:text-7xl md:text-8xl">Stellar</h1>
-          <p className="mt-4 max-w-xl text-lg text-muted-foreground">
+          <p className="mt-4 max-w-xl bg-background/90 px-3 py-1 text-lg text-foreground">
             The social network for life beyond Earth, where every message takes real time to cross space.
           </p>
 
@@ -122,16 +103,16 @@ export default function Landing() {
             <Link to="/forums" className="border border-border px-4 py-2 font-bold hover:bg-accent">Browse the forums</Link>
             <a href="#join" className="border border-border px-4 py-2 font-bold hover:bg-accent">Sign in</a>
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">No account needed to look around.</p>
+          <p className="mt-3 bg-background/90 px-2 text-sm text-foreground">No account needed to look around.</p>
         </section>
 
-        <section aria-labelledby="delays">
+        <section aria-labelledby="delays" className={PANEL}>
           <h2 id="delays" className="font-display mb-1 text-lg">Signal times right now</h2>
-          <p className="mb-4 text-muted-foreground">Light takes time to cross space. These numbers come from where the planets are today.</p>
-          {mounted ? <LiveDelays /> : <p className="font-signal text-muted-foreground">Calculating orbits...</p>}
+          <p className="mb-4 text-muted-foreground">Light takes time to cross space. Pick any two places to see how long a message takes today.</p>
+          {mounted ? <SignalMap /> : <p className="font-signal text-muted-foreground">Calculating orbits...</p>}
         </section>
 
-        <section aria-labelledby="features">
+        <section aria-labelledby="features" className={PANEL}>
           <h2 id="features" className="font-display mb-4 text-lg">What's inside</h2>
           <ul className="grid gap-5 sm:grid-cols-2">
             {FEATURES.map((f) => (
@@ -146,7 +127,7 @@ export default function Landing() {
           </ul>
         </section>
 
-        <section aria-labelledby="aliens" className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <section aria-labelledby="aliens" className={`${PANEL} grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]`}>
           <div>
             <h2 id="aliens" className="font-display mb-2 text-lg">You are not alone</h2>
             <p className="text-muted-foreground">
@@ -157,7 +138,7 @@ export default function Landing() {
           {mounted ? <AlienTicker /> : <p className="font-signal text-muted-foreground">Scanning for signals...</p>}
         </section>
 
-        <section id="join" aria-labelledby="steps" className="grid gap-8 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <section id="join" aria-labelledby="steps" className={`${PANEL} grid gap-8 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]`}>
           <div>
             <h2 id="steps" className="font-display mb-4 text-lg">How to join</h2>
             <ol className="space-y-4">
@@ -176,7 +157,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <footer className="font-signal border-t border-border pt-6 text-muted-foreground">
+        <footer className={`${PANEL} font-signal text-muted-foreground`}>
           Built at Geaux Hack 2026 by Vilarian Breaux, Brandon Richard, and Jailon Living.
         </footer>
       </div>
