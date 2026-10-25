@@ -1,4 +1,4 @@
-# Colony Comms
+# Stellar
 
 A social network for people living off Earth: colonists post photos, videos, and reports from their surroundings, reply to and quote each other, message across planets with real light-delay, discuss on per-planet forums, track their own vitals, and mark hazards and points of interest on a shared map.
 
@@ -14,7 +14,7 @@ A social network for people living off Earth: colonists post photos, videos, and
 
 ### What we built and the problem it solves
 
-People living on the Moon, Mars, or a space station are isolated, face hazards that change daily, and can wait many minutes for a message to reach Earth. Colony Comms gives them one place to share what they see, warn each other about hazards, and keep an eye on their own health and supplies.
+People living on the Moon, Mars, or a space station are isolated, face hazards that change daily, and can wait many minutes for a message to reach Earth. Stellar gives them one place to share what they see, warn each other about hazards, and keep an eye on their own health and supplies.
 
 **Goals**
 
@@ -28,12 +28,12 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 
 ### Features
 
-- **Welcome page:** first-time visitors land on a page that explains the app, shows live signal times and alien chatter, and offers GitHub/Google sign-in or a look around without an account.
+- **Welcome page:** a "Press Enter: Stellar" title screen (enter Stellar: interstellar) over a twinkling pixel starfield (tiny squares placed by code, no image). Press Enter anywhere, or the button, to go in. Below it, the page explains the app, shows live signal times and alien chatter, and offers GitHub/Google sign-in or a look around without an account.
 - **Home feed:** posts with photos/videos and optional location tags, updated in real time. Reply, quote, like, and repost; reposts appear in the timeline. Anyone can read; posting needs an account.
 - **Feed refresh:** new posts flow in live while you are at the top of the feed. If you have scrolled down to read, they wait (so nothing jumps under you) and a "new transmissions" button and the Refresh button show how many are waiting.
 - **Alien chatter:** six alien species on real worlds (Mars, Europa, Titan, Io, Enceladus, Proxima b) post in their own languages every few seconds, with a Translate button. Written by our own generator, with no AI service (see "How the aliens work" under Extras). Every viewer sees the same aliens at the same moment, and nothing is saved to the database.
-- **Pixel look:** pixel fonts, chunky pixel frames, and buttons that press down, made entirely with CSS and fonts (no images). The logo is the word "Colony" in a pixel font.
-- **Moodle-style layout:** a left navigation drawer, breadcrumbs (Colony > Forums > p/Mars > thread), and info blocks down the right side (colony pulse, signal times, colonists). On phones these become a bottom tab bar and blocks below the page.
+- **Pixel look:** pixel fonts, chunky pixel frames, and buttons that press down, made entirely with CSS and fonts (no images). The logo is the word "Stellar" in a pixel font.
+- **Moodle-style layout:** a left navigation drawer, breadcrumbs (Stellar > Forums > p/Mars > thread), and info blocks down the right side (colony pulse, signal times, colonists). On phones these become a bottom tab bar and blocks below the page.
 - **Profiles:** unique @username, profile picture, bio, home planet, and accent color. Public profile pages list posts and replies, with a Message button.
 - **Messages:** private DMs by @username. Messages travel at light speed between the sender's and recipient's home planets, with a live countdown. AI operators (@hab-os on Mars, @shackleton-ops on the Moon, @capcom on Earth, @station-ai in orbit) answer every DM in character and remember the conversation.
 - **Forums:** 16 boards laid out like a Moodle course: collapsible sections, a discussion table per board (Started by, Replies, Score, Last post), and replies in their own "Re:" boxes, indented under the post they answer. Boards come in three groups: home worlds (p/Mars, p/Moon, p/Earth, p/Orbit), fictional outer colonies (Europa, Titan, Ceres, Ganymede, the Kuiper Belt, Proxima b), and lounges (p/Random, p/AskAColonist, p/SpaceKitchen, and more). Threads, comments, replies, up/down votes, Top/New sorting, and trending threads.
@@ -124,7 +124,7 @@ No AI was used to generate any image or video assets. The app contains no drawn 
 | `src/features/aliens/*` | Generated the alien species, the word-hashing alien languages, the fill-in-the-blank sentence generator, the time-slot stream, and the alien post card |
 | `src/features/comms/Feed.tsx`, `PostCard.tsx` (updates) | Added alien posts, the refresh button and waiting-posts button, and skipped re-rendering unchanged cards |
 | `src/features/settings/settings.ts`, `src/pages/(app)/preferences.tsx` (updates) | Added the alien chatter setting |
-| `src/pages/index.tsx`, `src/seo.ts` (landing page) | Generated the welcome page: sign-in, live signal times, alien chatter preview, feature tiles, and how to join |
+| `src/pages/index.tsx`, `src/seo.ts`, `src/features/home/Starfield.tsx` (landing page) | Generated the welcome page: sign-in, live signal times, alien chatter preview, feature tiles, and how to join |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 

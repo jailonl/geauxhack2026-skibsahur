@@ -279,7 +279,7 @@ function PostCard(props: Props) {
       >
         <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: originColor }} />
         <span className="font-bold" style={{ color: originColor }}>
-          {isAlien ? 'Unknown origin' : origin ? `From ${BODY_LABELS[origin]}` : 'Colony network'}
+          {isAlien ? 'Unknown origin' : origin ? `From ${BODY_LABELS[origin]}` : 'Stellar network'}
         </span>
         {origin && delay >= 0.05 && (
           <span className="text-muted-foreground">

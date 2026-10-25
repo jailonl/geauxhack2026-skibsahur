@@ -40,8 +40,8 @@ const ICONS: Record<string, typeof House> = {
 /** The brand mark: just the word, set in the Silkscreen pixel font (no drawn logo, so no image assets). */
 function Wordmark() {
   return (
-    <Link to="/home" className="flex shrink-0 items-baseline gap-2 py-1 pr-2" aria-label="Colony, go to the feed">
-      <span className="font-display text-2xl leading-none text-primary">Colony</span>
+    <Link to="/home" className="flex shrink-0 items-baseline gap-2 py-1 pr-2" aria-label="Stellar, go to the feed">
+      <span className="font-display text-2xl leading-none text-primary">Stellar</span>
       <span className="font-signal hidden text-muted-foreground sm:inline">network</span>
     </Link>
   )

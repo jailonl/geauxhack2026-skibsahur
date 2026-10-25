@@ -124,11 +124,11 @@ function RightBlocks() {
   )
 }
 
-/** "Colony > Forums > p/Mars > Dust storm prep", worked out from the address. */
+/** "Stellar > Forums > p/Mars > Dust storm prep", worked out from the address. */
 function Breadcrumbs({ pathname }: { pathname: string }) {
   const { threads } = useForumActivity()
   const [, first, second] = pathname.split('/')
-  const crumbs: { label: string; to?: string }[] = [{ label: 'Colony', to: '/home' }]
+  const crumbs: { label: string; to?: string }[] = [{ label: 'Stellar', to: '/home' }]
 
   if (first === 'home') crumbs.push({ label: 'Feed' })
   else if (first === 'post') crumbs.push({ label: 'Feed', to: '/home' }, { label: 'Transmission' })
@@ -209,7 +209,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         )}
       </div>
       {!wide && isXl && (
-        <aside aria-label="Colony info" className="sticky top-4 max-h-[calc(100vh-6rem)] space-y-5 overflow-y-auto p-1">
+        <aside aria-label="Stellar info" className="sticky top-4 max-h-[calc(100vh-6rem)] space-y-5 overflow-y-auto p-1">
           <RightBlocks />
         </aside>
       )}
