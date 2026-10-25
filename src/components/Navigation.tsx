@@ -43,7 +43,6 @@ function Wordmark() {
   return (
     <Link to="/home" className="flex shrink-0 items-baseline gap-2 py-1 pr-2" aria-label="Stellar, go to the feed">
       <span className="font-display text-2xl leading-none text-primary">Stellar</span>
-      <span className="font-signal hidden text-muted-foreground sm:inline">network</span>
     </Link>
   )
 }
