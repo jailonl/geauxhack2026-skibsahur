@@ -1,10 +1,13 @@
 // "/vitals" page: your own health and supply readings, with warnings at real safety limits.
 // It's under (protected), so you have to be signed in, and the schema only lets you read your own
 // readings (see src/schemas/vitals-schema.ts). Live: a reading saved on another device shows up here.
+// The form, history, and limits open from buttons; a saved reading's result pops up (ReadingResult.tsx).
+import { useState } from 'react'
 import { useAuth, useMutations, useQuery } from 'deepspace'
 import Block from '../../../components/Block'
 import { useMyProfile } from '../../../features/social/profiles'
 import VitalCard, { LevelBadge, timeAgo } from '../../../features/vitals/VitalCard'
+import ReadingResult from '../../../features/vitals/ReadingResult'
 import VitalsForm from '../../../features/vitals/VitalsForm'
 import {
   BACKGROUND_DOSE, CAREER_LIMIT_MSV, LIMIT_NOTES,
@@ -16,10 +19,19 @@ import { BODY_LABELS, PLANET_COLORS } from '../../../lib/space'
 
 const fmt = (n: number, places = 0) => n.toFixed(places)
 
+type Panel = 'log' | 'history' | 'limits'
+const PANELS: { id: Panel; label: string }[] = [
+  { id: 'log', label: 'Log a reading' },
+  { id: 'history', label: 'Recent readings' },
+  { id: 'limits', label: 'Safety limits' },
+]
+
 export default function VitalsPage() {
   const { userId } = useAuth()
   const { profile } = useMyProfile()
   const home = profile?.homeBody ?? 'earth'
+  const [panel, setPanel] = useState<Panel | null>(null) // which tool is open (none at first)
+  const [saved, setSaved] = useState<Vitals | null>(null) // the reading shown in the pop-up
 
   const { records: raw, status, error } = useQuery<Vitals>('vitals', { orderBy: 'createdAt', orderDir: 'desc', limit: 500 })
   const { ready, remove } = useMutations<Vitals>('vitals')
@@ -140,111 +152,165 @@ export default function VitalsPage() {
         </div>
       </section>
 
-      <VitalsForm
-        home={home}
-        previous={{
-          oxygenDays: latest(records, 'oxygenDays')?.value,
-          waterDays: latest(records, 'waterDays')?.value,
-          foodDays: latest(records, 'foodDays')?.value,
+      {/* The three tools sit behind buttons so the page isn't crowded. One opens at a time. */}
+      <div role="group" aria-label="Vitals tools" className="flex flex-wrap gap-3">
+        {PANELS.map((p) => {
+          const isOpen = panel === p.id
+          return (
+            <button
+              key={p.id}
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls={`panel-${p.id}`}
+              onClick={() => setPanel(isOpen ? null : p.id)}
+              className={
+                isOpen
+                  ? 'bg-primary px-4 py-2 font-bold text-primary-foreground'
+                  : 'border border-border bg-card px-4 py-2 hover:bg-accent'
+              }
+            >
+              <span aria-hidden className="mr-1.5">{isOpen ? '▾' : '▸'}</span>
+              {p.label}
+              {p.id === 'history' && records.length > 0 && (
+                <span className="font-signal ml-1.5 opacity-80">({Math.min(records.length, 20)})</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {panel === 'log' && (
+        <div id="panel-log">
+          <Block id="vitals-log" title="Log a reading">
+            <VitalsForm
+              home={home}
+              previous={{
+                oxygenDays: latest(records, 'oxygenDays')?.value,
+                waterDays: latest(records, 'waterDays')?.value,
+                foodDays: latest(records, 'foodDays')?.value,
+              }}
+              onSaved={(reading) => {
+                setPanel(null) // close the form; the result pops up instead
+                setSaved(reading)
+              }}
+            />
+          </Block>
+        </div>
+      )}
+
+      {panel === 'history' && (
+        <div id="panel-history">
+          <Block id="vitals-history" title="Recent readings">
+            {records.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {status === 'loading' ? 'Loading…' : 'No readings yet. Open Log a reading to add one.'}
+              </p>
+            ) : (
+              <div className="-m-1 overflow-x-auto">
+                <table className="w-full min-w-[640px] text-left text-sm">
+                  <thead className="text-muted-foreground">
+                    <tr>
+                      <th scope="col" className="p-1.5 font-normal">When</th>
+                      <th scope="col" className="p-1.5 font-normal">HR</th>
+                      <th scope="col" className="p-1.5 font-normal">SpO2</th>
+                      <th scope="col" className="p-1.5 font-normal">BP</th>
+                      <th scope="col" className="p-1.5 font-normal">Temp</th>
+                      <th scope="col" className="p-1.5 font-normal">Rad</th>
+                      <th scope="col" className="p-1.5 font-normal">O2 / H2O / Food</th>
+                      <th scope="col" className="p-1.5 font-normal">Status</th>
+                      <th scope="col" className="p-1.5 font-normal"><span className="sr-only">Delete</span></th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-signal tabular-nums">
+                    {records.slice(0, 20).map((r) => {
+                      const v = r.data
+                      const level = worst(checkReading(v).map((c) => c.check.level))
+                      const dash = (n: number | undefined, places = 0) => (n == null ? '–' : fmt(n, places))
+                      return (
+                        <tr key={r.recordId} className="border-t border-border">
+                          <td className="p-1.5" title={new Date(r.createdAt).toLocaleString()}>
+                            {timeAgo(r.createdAt)}
+                            {v.source === 'sensor' && <span className="ml-1 text-muted-foreground">· sensor</span>}
+                          </td>
+                          <td className="p-1.5">{dash(v.heartRate)}</td>
+                          <td className="p-1.5">{dash(v.spo2)}</td>
+                          <td className="p-1.5">{v.systolic != null && v.diastolic != null ? `${v.systolic}/${v.diastolic}` : '–'}</td>
+                          <td className="p-1.5">{dash(v.temperature, 1)}</td>
+                          <td className="p-1.5">{dash(v.radiation, 2)}</td>
+                          <td className="p-1.5">{dash(v.oxygenDays)} / {dash(v.waterDays)} / {dash(v.foodDays)}</td>
+                          <td className="p-1.5"><LevelBadge level={level} /></td>
+                          <td className="p-1.5 text-right">
+                            {ready && (
+                              <button
+                                type="button"
+                                onClick={() => onDelete(r.recordId)}
+                                className="text-destructive underline"
+                                aria-label={`Delete reading from ${timeAgo(r.createdAt)}`}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                {records.some((r) => r.data.note) && (
+                  <ul className="mt-3 space-y-1 text-sm">
+                    {records.slice(0, 20).filter((r) => r.data.note).map((r) => (
+                      <li key={r.recordId}>
+                        <span className="font-signal text-muted-foreground">{timeAgo(r.createdAt)}:</span> {r.data.note}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </Block>
+        </div>
+      )}
+
+      {panel === 'limits' && (
+        <div id="panel-limits">
+          <Block id="vitals-limits" title="Safety limits">
+            <div className="-m-1 overflow-x-auto">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead className="text-muted-foreground">
+                  <tr>
+                    <th scope="col" className="p-1.5 font-normal">Reading</th>
+                    <th scope="col" className="p-1.5 font-normal"><LevelBadge level="ok" showLabel /></th>
+                    <th scope="col" className="p-1.5 font-normal"><LevelBadge level="caution" showLabel /></th>
+                    <th scope="col" className="p-1.5 font-normal"><LevelBadge level="danger" showLabel /></th>
+                    <th scope="col" className="p-1.5 font-normal">Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {LIMIT_NOTES.map((n) => (
+                    <tr key={n.name} className="border-t border-border">
+                      <th scope="row" className="p-1.5 font-normal">{n.name}</th>
+                      <td className="p-1.5">{n.normal}</td>
+                      <td className="p-1.5">{n.caution}</td>
+                      <td className="p-1.5">{n.danger}</td>
+                      <td className="p-1.5 text-muted-foreground">{n.source}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">For a hackathon demo, not medical advice.</p>
+          </Block>
+        </div>
+      )}
+
+      <ReadingResult
+        reading={saved}
+        onClose={() => setSaved(null)}
+        onLogAnother={() => {
+          setSaved(null)
+          setPanel('log')
         }}
       />
-
-      <Block id="vitals-history" title="Recent readings">
-        {records.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {status === 'loading' ? 'Loading…' : 'No readings yet. Press Read sensors, then Save.'}
-          </p>
-        ) : (
-          <div className="-m-1 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-muted-foreground">
-                <tr>
-                  <th scope="col" className="p-1.5 font-normal">When</th>
-                  <th scope="col" className="p-1.5 font-normal">HR</th>
-                  <th scope="col" className="p-1.5 font-normal">SpO2</th>
-                  <th scope="col" className="p-1.5 font-normal">BP</th>
-                  <th scope="col" className="p-1.5 font-normal">Temp</th>
-                  <th scope="col" className="p-1.5 font-normal">Rad</th>
-                  <th scope="col" className="p-1.5 font-normal">O2 / H2O / Food</th>
-                  <th scope="col" className="p-1.5 font-normal">Status</th>
-                  <th scope="col" className="p-1.5 font-normal"><span className="sr-only">Delete</span></th>
-                </tr>
-              </thead>
-              <tbody className="font-signal tabular-nums">
-                {records.slice(0, 20).map((r) => {
-                  const v = r.data
-                  const level = worst(checkReading(v).map((c) => c.check.level))
-                  const dash = (n: number | undefined, places = 0) => (n == null ? '–' : fmt(n, places))
-                  return (
-                    <tr key={r.recordId} className="border-t border-border">
-                      <td className="p-1.5" title={new Date(r.createdAt).toLocaleString()}>
-                        {timeAgo(r.createdAt)}
-                        {v.source === 'sensor' && <span className="ml-1 text-muted-foreground">· sensor</span>}
-                      </td>
-                      <td className="p-1.5">{dash(v.heartRate)}</td>
-                      <td className="p-1.5">{dash(v.spo2)}</td>
-                      <td className="p-1.5">{v.systolic != null && v.diastolic != null ? `${v.systolic}/${v.diastolic}` : '–'}</td>
-                      <td className="p-1.5">{dash(v.temperature, 1)}</td>
-                      <td className="p-1.5">{dash(v.radiation, 2)}</td>
-                      <td className="p-1.5">{dash(v.oxygenDays)} / {dash(v.waterDays)} / {dash(v.foodDays)}</td>
-                      <td className="p-1.5"><LevelBadge level={level} /></td>
-                      <td className="p-1.5 text-right">
-                        {ready && (
-                          <button
-                            type="button"
-                            onClick={() => onDelete(r.recordId)}
-                            className="text-destructive underline"
-                            aria-label={`Delete reading from ${timeAgo(r.createdAt)}`}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {records.some((r) => r.data.note) && (
-              <ul className="mt-3 space-y-1 text-sm">
-                {records.slice(0, 20).filter((r) => r.data.note).map((r) => (
-                  <li key={r.recordId}>
-                    <span className="font-signal text-muted-foreground">{timeAgo(r.createdAt)}:</span> {r.data.note}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </Block>
-
-      <Block id="vitals-limits" title="Safety limits">
-        <div className="-m-1 overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="text-muted-foreground">
-              <tr>
-                <th scope="col" className="p-1.5 font-normal">Reading</th>
-                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="ok" showLabel /></th>
-                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="caution" showLabel /></th>
-                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="danger" showLabel /></th>
-                <th scope="col" className="p-1.5 font-normal">Source</th>
-              </tr>
-            </thead>
-            <tbody>
-              {LIMIT_NOTES.map((n) => (
-                <tr key={n.name} className="border-t border-border">
-                  <th scope="row" className="p-1.5 font-normal">{n.name}</th>
-                  <td className="p-1.5">{n.normal}</td>
-                  <td className="p-1.5">{n.caution}</td>
-                  <td className="p-1.5">{n.danger}</td>
-                  <td className="p-1.5 text-muted-foreground">{n.source}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">For a hackathon demo, not medical advice.</p>
-      </Block>
     </div>
   )
 }

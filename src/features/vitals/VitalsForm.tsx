@@ -1,9 +1,10 @@
 // "Log a reading" form. Type numbers in, or press "Read sensors" to fill it with a simulated reading
 // for your home world, then Save. Empty boxes are skipped, so you can log just one thing.
+// After saving, the page shows the result in a pop-up (ReadingResult.tsx) instead of below the form.
 import { useState } from 'react'
 import { useMutations } from 'deepspace'
 import { BODY_LABELS, type Body } from '../../lib/space'
-import { FIELDS, VITAL_KEYS, checkReading, readingProblem, worst } from './limits'
+import { FIELDS, VITAL_KEYS, readingProblem } from './limits'
 import { simulateReading, type PreviousSupplies } from './simulate'
 import type { VitalKey, Vitals } from './types'
 
@@ -38,7 +39,11 @@ function NumberField({ k, value, onChange, label }: { k: VitalKey; value: string
   )
 }
 
-export default function VitalsForm({ home, previous }: { home: Body; previous: PreviousSupplies }) {
+export default function VitalsForm({ home, previous, onSaved }: {
+  home: Body
+  previous: PreviousSupplies
+  onSaved: (reading: Vitals) => void // called after a successful save, with what was saved
+}) {
   const { ready, create } = useMutations<Vitals>('vitals')
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [note, setNote] = useState('')
@@ -76,15 +81,7 @@ export default function VitalsForm({ home, previous }: { home: Body; previous: P
 
     try {
       await create(reading)
-      const checks = checkReading(reading)
-      const flagged = checks.filter((c) => c.check.level !== 'ok')
-      const level = worst(checks.map((c) => c.check.level))
-      setMessage(
-        flagged.length === 0
-          ? 'Saved. Everything is in the normal range.'
-          : `Saved. ${level === 'danger' ? 'Danger' : 'Warning'}: ` +
-              flagged.map((c) => `${c.label} (${c.check.reason})`).join('; '),
-      )
+      onSaved(reading)
       setDraft(EMPTY)
       setNote('')
       setFromSensors(false)
@@ -94,9 +91,9 @@ export default function VitalsForm({ home, previous }: { home: Body; previous: P
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 border bg-card p-4" aria-labelledby="log-reading">
+    <form onSubmit={onSubmit} className="space-y-4" aria-label="Log a reading">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="log-reading" className="font-display text-sm uppercase tracking-wider text-primary">Log a reading</h2>
+        <p className="text-sm text-muted-foreground">Fill in what you measured, or let the sensors do it.</p>
         <button
           type="button"
           onClick={onReadSensors}

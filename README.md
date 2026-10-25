@@ -49,7 +49,7 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Transmission cards:** every post shows which world it came from and how long its signal took to reach you.
 - **Notifications:** a bell with an unread count for likes, reposts, quotes, replies, direct messages, and forum replies.
 - **Search:** colonists, posts, forums, and threads.
-- **Vitals:** a private page (only you can read your readings) for heart rate, blood oxygen, blood pressure, body temperature, daily and mission radiation dose, and oxygen/water/food supplies. Each reading gets an 8-bit heart (full = good, half = warning, empty and blinking = danger) plus the level in words at real medical and NASA limits, with the reason in words, a trend line, and a history table. A "Read sensors" button fills in a believable reading for your home world (Moon, Mars, station, or Earth radiation levels) so the demo works without real hardware.
+- **Vitals:** a private page (only you can read your readings) for heart rate, blood oxygen, blood pressure, body temperature, daily and mission radiation dose, and oxygen/water/food supplies. Each reading gets an 8-bit heart (full = good, half = warning, empty and blinking = danger) plus the level in words at real medical and NASA limits, with the reason in words and a trend line. "Log a reading", "Recent readings", and "Safety limits" open from buttons so the page stays uncluttered, and after you save a reading its results pop up. A "Read sensors" button fills in a believable reading for your home world (Moon, Mars, station, or Earth radiation levels) so the demo works without real hardware.
 - **Accessibility:** a "Readable font" setting (Atkinson Hyperlegible, designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
 
 ### Tech stack
@@ -147,7 +147,8 @@ No AI was used to generate any image or video assets. The app contains no image 
 | `src/features/vitals/VitalCard.tsx` | Generated the vital card with level heart, reason, trend line, and time |
 | `src/features/vitals/PixelHeart.tsx`, `src/themes.css` (heart blink) | Generated the 8-bit heart (full, half, empty) from a 9×8 pixel grid, and its danger blink |
 | `src/features/vitals/VitalsForm.tsx` | Generated the "Log a reading" form |
-| `src/pages/(app)/(protected)/vitals.tsx` | Generated the Vitals page: status banner, cards, form, history, and safety-limits table |
+| `src/pages/(app)/(protected)/vitals.tsx` | Generated the Vitals page: status banner, cards, and the form, history, and safety-limits panels that open from buttons |
+| `src/features/vitals/ReadingResult.tsx` | Generated the pop-up that shows a saved reading's results |
 | `src/nav.ts`, `src/components/AppShell.tsx`, `src/components/Navigation.tsx` | Added the Vitals link, breadcrumb, and icon (phone tab bar now has 5 tabs) |
 
 **Code (Points of interest, Jailon Living):**

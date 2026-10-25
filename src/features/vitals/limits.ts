@@ -171,17 +171,19 @@ export function history(records: VitalsRecord[], key: VitalKey, count = 12): num
     .map((r) => r.data[key] as number)
 }
 
-/** Every check that applies to one reading (only for fields that were filled in). */
-export function checkReading(v: Vitals): { label: string; check: Check }[] {
-  const out: { label: string; check: Check }[] = []
-  if (v.heartRate != null) out.push({ label: 'Heart rate', check: checkHeartRate(v.heartRate) })
-  if (v.spo2 != null) out.push({ label: 'Blood oxygen', check: checkSpo2(v.spo2) })
-  if (v.systolic != null && v.diastolic != null) out.push({ label: 'Blood pressure', check: checkBloodPressure(v.systolic, v.diastolic) })
-  if (v.temperature != null) out.push({ label: 'Temperature', check: checkTemperature(v.temperature) })
-  if (v.radiation != null) out.push({ label: 'Radiation', check: checkRadiationDay(v.radiation) })
-  if (v.oxygenDays != null) out.push({ label: 'Oxygen', check: checkSupply(v.oxygenDays) })
-  if (v.waterDays != null) out.push({ label: 'Water', check: checkSupply(v.waterDays) })
-  if (v.foodDays != null) out.push({ label: 'Food', check: checkSupply(v.foodDays) })
+/** Every check that applies to one reading (only for fields that were filled in), with the value as text. */
+export function checkReading(v: Vitals): { label: string; value: string; check: Check }[] {
+  const out: { label: string; value: string; check: Check }[] = []
+  if (v.heartRate != null) out.push({ label: 'Heart rate', value: `${v.heartRate} bpm`, check: checkHeartRate(v.heartRate) })
+  if (v.spo2 != null) out.push({ label: 'Blood oxygen', value: `${v.spo2}%`, check: checkSpo2(v.spo2) })
+  if (v.systolic != null && v.diastolic != null) {
+    out.push({ label: 'Blood pressure', value: `${v.systolic}/${v.diastolic} mmHg`, check: checkBloodPressure(v.systolic, v.diastolic) })
+  }
+  if (v.temperature != null) out.push({ label: 'Temperature', value: `${v.temperature.toFixed(1)} °C`, check: checkTemperature(v.temperature) })
+  if (v.radiation != null) out.push({ label: 'Radiation today', value: `${v.radiation} mSv`, check: checkRadiationDay(v.radiation) })
+  if (v.oxygenDays != null) out.push({ label: 'Oxygen', value: `${v.oxygenDays} days`, check: checkSupply(v.oxygenDays) })
+  if (v.waterDays != null) out.push({ label: 'Water', value: `${v.waterDays} days`, check: checkSupply(v.waterDays) })
+  if (v.foodDays != null) out.push({ label: 'Food', value: `${v.foodDays} days`, check: checkSupply(v.foodDays) })
   return out
 }
 
