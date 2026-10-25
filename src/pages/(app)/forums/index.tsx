@@ -1,4 +1,5 @@
-// "/forums" — every board, grouped (home worlds, outer colonies, lounges), plus the top threads right now.
+// "/forums" — every board, grouped into collapsible sections (home worlds, outer colonies, lounges) like a
+// Moodle course page, plus the top threads right now.
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAuthToken, useQuery, useUser } from 'deepspace'
@@ -25,7 +26,7 @@ function SeedButton() {
   }
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm">
-      <button type="button" onClick={seed} disabled={state === 'working'} className="rounded-full border border-border px-4 py-1.5 font-bold hover:bg-accent disabled:opacity-50">
+      <button type="button" onClick={seed} disabled={state === 'working'} className="border border-border px-4 py-1.5 font-bold hover:bg-accent disabled:opacity-50">
         {state === 'working' ? 'Seeding...' : 'Seed the forums'}
       </button>
       {state !== 'idle' && state !== 'working' && <span className="text-muted-foreground">{state}</span>}
@@ -39,9 +40,13 @@ export default function ForumsPage() {
   const { user } = useUser()
   const isAdmin = user?.role === 'admin' || user?.isAdmin === true
 
-  // One pass: thread count and latest activity per forum.
+  // One pass (records are newest first): thread count and newest thread per forum.
   const counts = new Map<string, number>()
-  for (const r of records) counts.set(r.data.forum, (counts.get(r.data.forum) ?? 0) + 1)
+  const newest = new Map<string, Thread & { id: string; at: string }>()
+  for (const r of records) {
+    counts.set(r.data.forum, (counts.get(r.data.forum) ?? 0) + 1)
+    if (!newest.has(r.data.forum)) newest.set(r.data.forum, { ...r.data, id: r.recordId, at: r.createdAt })
+  }
 
   // Trending: highest score among threads from the last 3 days.
   const cutoff = Date.now() - 3 * 86_400_000
@@ -51,65 +56,83 @@ export default function ForumsPage() {
     .slice(0, 5)
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-5">
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
+    <div className="space-y-5 px-1 py-2">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl leading-none">Forums</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Longer conversations, one board per world and topic.</p>
+          <h1 className="font-display text-2xl leading-none">Stellar forums</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Longer conversations, one board per world and topic. Open a section to see its boards.</p>
         </div>
         {isAdmin && <SeedButton />}
       </header>
 
       {trending.length > 0 && (
-        <section className="border-b border-border py-5">
-          <h2 className="mb-2 font-display text-xl">Trending threads</h2>
-          <ol className="space-y-2">
+        <details open className="border border-border bg-card">
+          <summary className="font-display cursor-pointer bg-secondary px-3 py-2 text-xs uppercase tracking-wider text-primary">Trending threads</summary>
+          <ol className="divide-y divide-dashed divide-border">
             {trending.map((t) => {
               const f = findForum(t.data.forum)
               return (
                 <li key={t.recordId}>
-                  <Link to={`/thread/${t.recordId}`} className="group flex items-baseline gap-3">
-                    <span className="w-8 shrink-0 text-right font-bold tabular-nums text-primary">{votes.score(t.recordId)}</span>
-                    <span className="min-w-0">
-                      <span className="block truncate group-hover:underline">{t.data.title}</span>
-                      {f && <span className="text-sm" style={{ color: f.accent }}>{f.name}</span>}
-                    </span>
+                  <Link to={`/thread/${t.recordId}`} className="group flex items-baseline gap-3 px-3 py-2 hover:bg-accent/40">
+                    <span className="font-signal w-8 shrink-0 text-right tabular-nums text-primary">{votes.score(t.recordId)}</span>
+                    <span className="min-w-0 flex-1 truncate group-hover:underline">{t.data.title}</span>
+                    {f && <span className="hidden shrink-0 text-sm sm:inline" style={{ color: f.accent }}>{f.name}</span>}
                   </Link>
                 </li>
               )
             })}
           </ol>
-        </section>
+        </details>
       )}
 
+      {/* One collapsible section per category, like the topic sections of a Moodle course page. */}
       {CATEGORIES.map((c) => (
-        <section key={c} className="border-b border-border py-5">
-          <h2 className="font-display text-xl">{CATEGORY_LABELS[c].title}</h2>
-          <p className="mb-3 text-sm text-muted-foreground">{CATEGORY_LABELS[c].blurb}</p>
-          <ul className="grid gap-1 sm:grid-cols-2">
-            {FORUMS.filter((f) => f.category === c).map((f) => {
-              const n = counts.get(f.slug) ?? 0
-              return (
-                <li key={f.slug}>
-                  <Link to={`/forums/${f.slug}`} className="flex gap-3 rounded-xl p-2.5 hover:bg-accent/50">
-                    <span
-                      aria-hidden
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold"
-                      style={{ background: `${f.accent}26`, color: f.accent, boxShadow: `inset 0 0 0 1.5px ${f.accent}` }}
-                    >
-                      {f.glyph}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-bold">{f.name}</span>
-                      <span className="line-clamp-2 block text-sm text-muted-foreground">{f.tagline}</span>
-                      <span className="text-xs text-muted-foreground">{n} {n === 1 ? 'thread' : 'threads'}</span>
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
+        <details key={c} open className="border border-border bg-card">
+          <summary className="cursor-pointer bg-secondary px-3 py-2">
+            <span className="font-display text-xs uppercase tracking-wider text-primary">{CATEGORY_LABELS[c].title}</span>
+            <span className="ml-2 text-sm text-muted-foreground">{CATEGORY_LABELS[c].blurb}</span>
+          </summary>
+          <table className="w-full table-fixed text-sm">
+            <thead>
+              <tr className="font-signal text-left text-base text-muted-foreground">
+                <th scope="col" className="px-3 py-1.5 font-normal">Forum</th>
+                <th scope="col" className="hidden w-20 px-2 py-1.5 font-normal sm:table-cell">Topics</th>
+                <th scope="col" className="hidden w-[38%] px-3 py-1.5 font-normal md:table-cell">Latest topic</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FORUMS.filter((f) => f.category === c).map((f) => {
+                const n = counts.get(f.slug) ?? 0
+                const latest = newest.get(f.slug)
+                return (
+                  <tr key={f.slug} className="border-t border-dashed border-border align-top hover:bg-accent/30">
+                    <td className="px-3 py-2.5">
+                      <Link to={`/forums/${f.slug}`} className="flex gap-2.5">
+                        <span aria-hidden className="mt-0.5 text-lg leading-none" style={{ color: f.accent }}>{f.glyph}</span>
+                        <span className="min-w-0">
+                          <span className="block font-bold text-primary hover:underline">{f.name}</span>
+                          <span className="line-clamp-2 block text-muted-foreground">{f.tagline}</span>
+                          <span className="font-signal block text-muted-foreground sm:hidden">{n} topics</span>
+                        </span>
+                      </Link>
+                    </td>
+                    <td className="font-signal hidden px-2 py-2.5 text-base sm:table-cell">{n}</td>
+                    <td className="hidden px-3 py-2.5 md:table-cell">
+                      {latest ? (
+                        <Link to={`/thread/${latest.id}`} className="block hover:underline">
+                          <span className="line-clamp-1 block">{latest.title}</span>
+                          <span className="font-signal block text-muted-foreground">{new Date(latest.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">No topics yet</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </details>
       ))}
     </div>
   )

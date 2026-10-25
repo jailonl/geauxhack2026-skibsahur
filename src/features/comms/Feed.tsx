@@ -1,9 +1,16 @@
-// The home timeline: posts and reposts, newest first, updating live, with reply previews under each post.
+// The home timeline: posts, reposts, and intercepted alien posts, newest first, with reply previews under each post.
 // Guests can read everything; posting, replying, quoting, liking, and reposting need an account.
-// Tabs show one world's tagged posts; bots follow the Settings toggle; admins can summon a bot or delete any post.
-import { useState } from 'react'
+// Tabs show one world's tagged posts; bots and aliens follow the Settings; admins can summon a bot or delete any post.
+//
+// Refresh: new items appear right away while you're at the top of the feed. If you've scrolled down to read,
+// they wait (so nothing jumps under you) and a "new transmissions" button shows how many are waiting.
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getAuthToken, useAuth, useMutations, useUser } from 'deepspace'
+import { RefreshCw } from 'lucide-react'
 import { BODY_LABELS, PLANET_COLORS } from '../../lib/space'
+import AlienCard from '../aliens/AlienCard'
+import type { AlienPost } from '../aliens/generator'
+import { quotesFrom, useAlienStream, type AlienChatter } from '../aliens/useAlienStream'
 import { updateSettings, useSettings } from '../settings/settings'
 import { useMyProfile, useProfiles } from '../social/profiles'
 import PostCard from './PostCard'
@@ -13,12 +20,22 @@ import type { Body, Post, PostRecord } from './types'
 
 const TABS: (Body | 'all')[] = ['all', 'mars', 'moon', 'earth', 'station']
 
-type FeedItem = { key: string; post: PostRecord; at: string; repostedBy?: { label: string; href?: string } }
+type FeedItem =
+  | { kind: 'post'; key: string; at: number; mine: boolean; post: PostRecord; repostedBy?: { label: string; href?: string } }
+  | { kind: 'alien'; key: string; at: number; mine: false; alien: AlienPost }
+
+/** The scrolling area of the app (the <main> element in the layout). */
+function scroller(): HTMLElement | null {
+  return document.querySelector('main')
+}
+const NEAR_TOP = 120 // px: "at the top of the feed"
 
 export default function Feed() {
   const [tab, setTab] = useState<Body | 'all'>('all')
   const [summoning, setSummoning] = useState(false)
-  const { showBots } = useSettings()
+  const { showBots, alienChatter } = useSettings()
+  const [cutoff, setCutoff] = useState(() => Date.now()) // items after this time wait for a refresh
+  const [spinning, setSpinning] = useState(false)
 
   const feed = useFeedData()
   const profiles = useProfiles()
@@ -29,10 +46,16 @@ export default function Feed() {
   const reactions = useReactionActions()
   const isAdmin = user?.role === 'admin' || user?.isAdmin === true
 
-  // Timeline = original posts (not replies) plus reposts, each placed at the time it happened.
+  // Aliens can quote recent human posts they "intercepted".
+  const humanQuotes = quotesFrom(feed.posts.filter((p) => !p.data.botKind && !p.data.replyToId).map((p) => p.data.text))
+  const aliens = useAlienStream(alienChatter, humanQuotes)
+
+  // Timeline = original posts (not replies), reposts (each at the time it happened), and alien posts.
   const items: FeedItem[] = []
   for (const p of feed.posts) {
-    if (!p.data.replyToId) items.push({ key: p.recordId, post: p, at: p.createdAt })
+    if (!p.data.replyToId) {
+      items.push({ kind: 'post', key: p.recordId, post: p, at: new Date(p.createdAt).getTime(), mine: userId != null && p.createdBy === userId })
+    }
   }
   for (const r of feed.reposts) {
     const post = feed.byId.get(r.data.targetId)
@@ -40,31 +63,67 @@ export default function Feed() {
     const who = profiles.byUserId.get(r.createdBy)
     const isMe = userId != null && r.createdBy === userId
     items.push({
+      kind: 'post',
       key: `repost-${r.recordId}`,
       post,
-      at: r.createdAt,
+      at: new Date(r.createdAt).getTime(),
+      mine: isMe,
       repostedBy: { label: isMe ? 'You' : who ? `@${who.username}` : 'Someone', href: who ? `/u/${who.username}` : undefined },
     })
   }
-  const visible = items
-    .filter((i) => tab === 'all' || i.post.data.body === tab)
-    .filter((i) => showBots || !i.post.data.botKind)
-    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+  for (const a of aliens) items.push({ kind: 'alien', key: a.id, alien: a, at: a.at, mine: false })
 
-  async function onDelete(postId: string) {
+  const inTab = (i: FeedItem) =>
+    tab === 'all' || (i.kind === 'post' ? i.post.data.body === tab : i.alien.species.feedTab === tab)
+  const all = items
+    .filter(inTab)
+    .filter((i) => i.kind === 'alien' || showBots || !i.post.data.botKind)
+    .sort((a, b) => b.at - a.at)
+  // Your own posts always show at once; everything newer than the cutoff waits for a refresh.
+  const waiting = all.filter((i) => i.at > cutoff && !i.mine)
+  const visible = all.filter((i) => i.at <= cutoff || i.mine)
+
+  function refresh() {
+    setCutoff(Date.now())
+    setSpinning(true)
+    window.setTimeout(() => setSpinning(false), 600)
+    scroller()?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // At the top of the feed, new items flow in live. Scrolled down, they wait until you come back up or tap the button.
+  const waitingRef = useRef(0)
+  waitingRef.current = waiting.length
+  useEffect(() => {
+    const main = scroller()
+    if (waiting.length > 0 && (!main || main.scrollTop < NEAR_TOP)) setCutoff(Date.now())
+  }, [waiting.length])
+  useEffect(() => {
+    const main = scroller()
+    if (!main) return
+    const onScroll = () => {
+      if (waitingRef.current > 0 && main.scrollTop < NEAR_TOP) setCutoff(Date.now())
+    }
+    main.addEventListener('scroll', onScroll, { passive: true })
+    return () => main.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Stable handlers (same function every render) so unchanged post cards can skip re-rendering.
+  // They read the latest remove/toggle through a ref.
+  const actions = useRef({ remove, reactions })
+  actions.current = { remove, reactions }
+  const onDelete = useCallback(async (postId: string) => {
     if (!window.confirm('Delete this post?')) return
     try {
-      await remove(postId)
+      await actions.current.remove(postId)
     } catch (err) {
       window.alert('Delete failed: ' + (err instanceof Error ? err.message : String(err)))
     }
-  }
-
-  function onToggle(postId: string, kind: 'like' | 'repost', existingId: string | null) {
-    reactions.toggle(postId, kind, existingId)?.catch((err: unknown) => {
+  }, [])
+  const onToggle = useCallback((postId: string, kind: 'like' | 'repost', existingId: string | null) => {
+    actions.current.reactions.toggle(postId, kind, existingId)?.catch((err: unknown) => {
       window.alert('Could not update: ' + (err instanceof Error ? err.message : String(err)))
     })
-  }
+  }, [])
 
   // Admin-only: ask the server to post one bot message right now (src/actions/index.ts).
   async function onSummonBot() {
@@ -91,7 +150,7 @@ export default function Feed() {
           <h1 className="font-display text-3xl leading-none">The feed</h1>
           <p className="mt-1 text-sm text-muted-foreground">Transmissions from every colony, as they arrive.</p>
         </div>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
           <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
             <input
               type="checkbox"
@@ -101,6 +160,28 @@ export default function Feed() {
             />
             Show bots
           </label>
+          <label className="flex items-center gap-1.5 text-muted-foreground">
+            Aliens
+            <select
+              value={alienChatter}
+              onChange={(e) => updateSettings({ alienChatter: e.target.value as AlienChatter })}
+              className="border border-border bg-card px-1.5 py-0.5 text-foreground"
+            >
+              <option value="lively">Lively</option>
+              <option value="calm">Calm</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={refresh}
+            className="flex items-center gap-1.5 border border-border px-2.5 py-1 font-bold hover:bg-accent"
+            aria-label={waiting.length > 0 ? `Refresh, ${waiting.length} new` : 'Refresh the feed'}
+          >
+            <RefreshCw className={`h-4 w-4 ${spinning ? 'refresh-spin' : ''}`} aria-hidden />
+            Refresh
+            {waiting.length > 0 && <span className="bg-primary px-1.5 text-xs text-primary-foreground">{waiting.length}</span>}
+          </button>
           {isAdmin && (
             <button type="button" onClick={onSummonBot} disabled={summoning} className="font-bold text-primary hover:underline disabled:opacity-50">
               {summoning ? 'Summoning...' : 'Summon a bot'}
@@ -143,21 +224,34 @@ export default function Feed() {
         </p>
       )}
 
-      {visible.map((item) => (
-        <PostCard
-          key={item.key}
-          post={item.post}
-          profiles={profiles}
-          feed={feed}
-          stats={feed.stats(item.post.recordId)}
-          canDelete={isAdmin || (userId != null && item.post.createdBy === userId)}
-          canReact={Boolean(me)}
-          onToggle={onToggle}
-          onDelete={onDelete}
-          repostedBy={item.repostedBy}
-          showReplyPreview
-        />
-      ))}
+      {/* Waiting items: a button that stays at the top of the screen while you scroll. */}
+      {waiting.length > 0 && (
+        <div className="sticky top-2 z-10 flex justify-center">
+          <button type="button" onClick={refresh} className="bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground">
+            ▲ {waiting.length} new {waiting.length === 1 ? 'transmission' : 'transmissions'}
+          </button>
+        </div>
+      )}
+
+      {visible.map((item) =>
+        item.kind === 'alien' ? (
+          <AlienCard key={item.key} post={item.alien} />
+        ) : (
+          <PostCard
+            key={item.key}
+            post={item.post}
+            profiles={profiles}
+            feed={feed}
+            stats={feed.stats(item.post.recordId)}
+            canDelete={isAdmin || (userId != null && item.post.createdBy === userId)}
+            canReact={Boolean(me)}
+            onToggle={onToggle}
+            onDelete={onDelete}
+            repostedBy={item.repostedBy}
+            showReplyPreview
+          />
+        ),
+      )}
     </div>
   )
 }

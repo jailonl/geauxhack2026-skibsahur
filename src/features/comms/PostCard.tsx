@@ -1,7 +1,7 @@
 // One transmission: a card with an origin strip (which world it came from, and how long the signal took to
-// reach you), the author, the text in the dispatch serif, media, a quoted post, labeled actions, and a preview
+// reach you, in the VT323 terminal font), the author, the text, media, a quoted post, labeled actions, and a preview
 // of the latest replies. Clicking anywhere on the card (except a control) opens the full thread.
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useR2Files } from 'deepspace'
 import { Heart, ImageOff, MessageCircle, Quote, Repeat2, Trash2, Volume2 } from 'lucide-react'
@@ -91,7 +91,7 @@ function originOf(post: PostRecord, profiles: Profiles): Body | null {
   return profiles.byUserId.get(post.createdBy)?.homeBody ?? null
 }
 
-export default function PostCard(props: Props) {
+function PostCard(props: Props) {
   const {
     post, profiles, feed, stats, canDelete, canReact, onToggle, onDelete, repostedBy,
     linkToPost = true, showReplyPreview = false, isReplyPreview = false,
@@ -274,12 +274,12 @@ export default function PostCard(props: Props) {
     >
       {/* Origin strip: which world sent this, and how long the light took to reach you. */}
       <div
-        className="flex flex-wrap items-center gap-x-2 gap-y-0.5 px-4 py-1.5 text-xs"
+        className="font-signal flex flex-wrap items-center gap-x-2 gap-y-0.5 px-4 py-1 text-sm"
         style={{ background: `color-mix(in srgb, ${originColor} 16%, transparent)`, borderBottom: `1px solid color-mix(in srgb, ${originColor} 35%, transparent)` }}
       >
         <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: originColor }} />
         <span className="font-bold" style={{ color: originColor }}>
-          {isAlien ? 'Unknown origin' : origin ? `From ${BODY_LABELS[origin]}` : 'Colony network'}
+          {isAlien ? 'Unknown origin' : origin ? `From ${BODY_LABELS[origin]}` : 'Stellar network'}
         </span>
         {origin && delay >= 0.05 && (
           <span className="text-muted-foreground">
@@ -319,3 +319,16 @@ export default function PostCard(props: Props) {
     </article>
   )
 }
+
+/** True when a card would look the same, so React can skip re-rendering it. The feed re-renders every few
+ * seconds for alien posts; without this every card on the page would redraw each time. */
+function sameCard(a: Props, b: Props): boolean {
+  if (a.repostedBy?.label !== b.repostedBy?.label || a.repostedBy?.href !== b.repostedBy?.href) return false
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof Props>
+  for (const key of keys) {
+    if (key !== 'repostedBy' && a[key] !== b[key]) return false
+  }
+  return true
+}
+
+export default memo(PostCard, sameCard)
