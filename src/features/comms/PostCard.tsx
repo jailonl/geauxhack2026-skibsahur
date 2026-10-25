@@ -186,7 +186,7 @@ export default function PostCard(props: Props) {
               <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: PLANET_COLORS[d.body] }} />
                 {BODY_LABELS[d.body] ?? d.body} at {d.lat.toFixed(2)}, {d.lng.toFixed(2)}
-                <Link to="/map" className="text-primary hover:underline">Open map</Link>
+                <Link to={`/map?body=${d.body}&lat=${d.lat}&lng=${d.lng}`} className="text-primary hover:underline">Open map</Link>
               </p>
             )}
 
