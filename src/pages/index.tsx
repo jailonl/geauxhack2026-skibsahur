@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import AlienCard from '../features/aliens/AlienCard'
 import Starfield from '../features/home/Starfield'
@@ -24,7 +24,7 @@ const SURVIVAL = [
   { to: '/messages', title: 'Reach help', text: 'Message mission operators on every world. They answer emergencies in seconds on your own world and tell you exactly how long a reply from farther away will take.' },
   { to: '/map', title: 'Warn everyone', text: 'Mark hazards, colonies, and resources on real NASA terrain. Every point of interest gets its own forum thread so others can confirm it.' },
   { to: '/vitals', title: 'Watch your body', text: 'Log heart rate, oxygen, pressure, temperature, radiation, and supplies against real medical and NASA limits, then share a reading with a doctor or crewmate.' },
-  { to: '/signals', title: 'Know the wait', text: 'See the real light delay between any two places today, so you know whether help is seconds, minutes, or years away.' },
+  { to: '/#delays', title: 'Know the wait', text: 'See the real light delay between any two places today, so you know whether help is seconds, minutes, or years away.' },
   { to: '/home', title: 'Stay connected', text: 'A live feed and planet forums so isolated crews can share what they see, ask for advice, and not feel alone.' },
 ]
 
@@ -54,10 +54,16 @@ export default function Landing() {
   // Browser-only parts wait for this, so the prerendered HTML matches the first render.
   const [mounted, setMounted] = useState(false)
   const navigate = useNavigate()
+  const { hash } = useLocation()
   useEffect(() => {
     applySettings() // saved theme, text size, readable font
     setMounted(true)
   }, [])
+
+  // Links to "/#delays" (side panel, tiles) jump to the signal map once the page has drawn it.
+  useEffect(() => {
+    if (mounted && hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' })
+  }, [mounted, hash])
 
   // Press Enter anywhere to go in. Links, buttons, and form fields already use Enter for themselves, so skip those.
   useEffect(() => {
@@ -103,7 +109,7 @@ export default function Landing() {
 
           <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm">
             <Link to="/messages" className="border border-border px-4 py-2 font-bold hover:bg-accent">Reach an operator</Link>
-            <Link to="/signals" className="border border-border px-4 py-2 font-bold hover:bg-accent">Check signal times</Link>
+            <Link to="/#delays" className="border border-border px-4 py-2 font-bold hover:bg-accent">Check signal times</Link>
             <a href="#join" className="border border-border px-4 py-2 font-bold hover:bg-accent">Sign in</a>
           </div>
           <p className="mt-3 bg-background/90 px-2 text-sm text-foreground">No account needed to look around.</p>

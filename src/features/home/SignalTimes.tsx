@@ -1,5 +1,5 @@
 // "Signal times": how long a message from your home world takes to reach a handful of places, right now.
-// Planets move, so the numbers change from day to day. The full any-to-any version is the Signal map page.
+// Planets move, so the numbers change from day to day. The full any-to-any version is the Signal map on the welcome page.
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Block from '../../components/Block'
@@ -36,7 +36,7 @@ export default function SignalTimes({ home }: { home: Place }) {
           </li>
         ))}
       </ul>
-      <Link to="/signals" className="font-signal mt-3 inline-block text-primary hover:underline">[ Open the signal map ]</Link>
+      <Link to="/#delays" className="font-signal mt-3 inline-block text-primary hover:underline">[ Signal map on the home screen ]</Link>
     </Block>
   )
 }
