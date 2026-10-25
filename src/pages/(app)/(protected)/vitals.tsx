@@ -15,7 +15,7 @@ import { useMyVitals } from '../../../features/vitals/useVitalsSharing'
 import VitalsPrivacy from '../../../features/vitals/VitalsPrivacy'
 import VitalsForm from '../../../features/vitals/VitalsForm'
 import {
-  BACKGROUND_DOSE, CAREER_LIMIT_MSV, LIMIT_NOTES,
+  BACKGROUND_DOSE, CAREER_LIMIT_MSV, DEEP_SPACE_DOSE, DOSE_MEASURED, LIMIT_NOTES,
   checkBloodPressure, checkHeartRate, checkMissionDose, checkRadiationDay, checkReading, checkSpo2,
   checkSupply, checkTemperature, history, latest, missionDose, worst,
 } from '../../../features/vitals/limits'
@@ -133,7 +133,11 @@ export default function VitalsPage() {
             label="Dose today"
             unit="mSv"
             {...radDay}
-            hint={`${BODY_LABELS[home]} background: about ${BACKGROUND_DOSE[home]} mSv/day`}
+            hint={
+              DOSE_MEASURED.has(home)
+                ? `${BODY_LABELS[home]} background: about ${BACKGROUND_DOSE[home]} mSv/day`
+                : `No surface data for ${BODY_LABELS[home]}; deep space is about ${DEEP_SPACE_DOSE} mSv/day`
+            }
           />
           <VitalCard
             label="Mission total"

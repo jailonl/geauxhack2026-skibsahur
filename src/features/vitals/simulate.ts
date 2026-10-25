@@ -1,8 +1,8 @@
 // "Read sensors" for the demo: makes a believable reading for where you live, so you don't have to
 // type every number. Mostly normal values, with a small chance of one problem so the warnings show up.
 // Nothing here is saved by itself: it only fills in the form, and you press Save.
-import type { Body } from '../../lib/space'
-import { BACKGROUND_DOSE } from './limits'
+import type { Place } from '../../lib/space'
+import { BACKGROUND_DOSE, DOSE_MEASURED } from './limits'
 import type { Vitals } from './types'
 
 type Rng = () => number // returns 0 (inclusive) to 1 (exclusive), like Math.random
@@ -13,7 +13,7 @@ const round = (n: number, places = 0) => Number(n.toFixed(places))
 /** Supplies left last time (if any), so the numbers count down between readings. */
 export type PreviousSupplies = { oxygenDays?: number; waterDays?: number; foodDays?: number }
 
-export function simulateReading(body: Body, previous: PreviousSupplies = {}, rng: Rng = Math.random): Vitals {
+export function simulateReading(body: Place, previous: PreviousSupplies = {}, rng: Rng = Math.random): Vitals {
   const v: Vitals = {
     body,
     heartRate: round(between(rng, 58, 84)),
@@ -21,7 +21,9 @@ export function simulateReading(body: Body, previous: PreviousSupplies = {}, rng
     systolic: round(between(rng, 104, 126)),
     diastolic: round(between(rng, 64, 79)),
     temperature: round(between(rng, 36.3, 37.3), 1),
-    radiation: round(BACKGROUND_DOSE[body] * between(rng, 0.85, 1.15), 3),
+    // Measured worlds vary ±15%. Elsewhere we only have the deep-space level, and a colony habitat's
+    // shielding (ice, rock, water walls) keeps people below it.
+    radiation: round(BACKGROUND_DOSE[body] * (DOSE_MEASURED.has(body) ? between(rng, 0.85, 1.15) : between(rng, 0.5, 0.9)), 3),
     source: 'sensor',
   }
 

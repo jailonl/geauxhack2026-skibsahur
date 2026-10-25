@@ -1,7 +1,7 @@
 // "Vitals" box on a colonist's profile. Shows only if they set their vitals to Public;
 // otherwise it renders nothing (the data isn't there to read).
 import { Link } from 'react-router-dom'
-import { BODY_LABELS, type Body } from '../../lib/space'
+import { BODY_LABELS } from '../../lib/space'
 import PixelHeart from './PixelHeart'
 import { publicRows } from './sharing'
 import { usePublicVitals } from './useVitalsSharing'
@@ -22,7 +22,7 @@ export default function ProfileVitals({ userId, isMe }: { userId: string; isMe: 
           <PixelHeart level={overall} size={2} /> Vitals
         </h2>
         <span className="font-signal text-muted-foreground">
-          {pub.data.body ? `${BODY_LABELS[pub.data.body as Body]} · ` : ''}
+          {pub.data.body ? `${BODY_LABELS[pub.data.body]} · ` : ''}
           {pub.data.takenAt ? timeAgo(new Date(pub.data.takenAt).toISOString()) : ''}
         </span>
       </div>

@@ -2,6 +2,7 @@
 // Health data is private: only the person who logged a reading can read it. Admins included,
 // same as DMs. Every number is optional so you can log just one thing (say, a temperature).
 import type { CollectionSchema } from 'deepspace/schema'
+import { ALL_PLACES } from '../lib/space'
 
 const FIELDS = [
   'body', 'heartRate', 'spo2', 'systolic', 'diastolic', 'temperature',
@@ -12,7 +13,7 @@ export const vitalsSchema: CollectionSchema = {
   name: 'vitals',
   columns: [
     // Where the reading was taken (the colonist's home world at the time).
-    { name: 'body', storage: 'text', interpretation: { kind: 'select', options: ['earth', 'moon', 'mars', 'station'] } },
+    { name: 'body', storage: 'text', interpretation: { kind: 'select', options: ALL_PLACES } },
 
     // Health
     { name: 'heartRate', storage: 'number', interpretation: 'plain' }, // beats per minute, resting

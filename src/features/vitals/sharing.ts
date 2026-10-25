@@ -1,6 +1,6 @@
 // Sharing rules with no UI: the text of a "shared vitals" message, and the public snapshot
 // that shows on your profile when your vitals are set to Public.
-import { BODY_LABELS, type Body } from '../../lib/space'
+import { BODY_LABELS } from '../../lib/space'
 import { LEVEL_TEXT, VITAL_KEYS, checkMissionDose, checkReading, latest, missionDose, worst } from './limits'
 import type { Vitals, VitalsRecord } from './types'
 
@@ -21,7 +21,7 @@ export type PublicVitals = Omit<Vitals, 'note' | 'source'> & {
  */
 export function shareMessage(reading: Vitals, from: { username: string }, takenAt: string | number): string {
   const rows = checkReading(reading)
-  const where = BODY_LABELS[(reading.body ?? 'earth') as Body]
+  const where = BODY_LABELS[reading.body ?? 'earth']
   const when = new Date(takenAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
   const lines = [
     `[VITALS] @${from.username} shared a reading from ${where} (${when})`,

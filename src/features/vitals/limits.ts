@@ -1,6 +1,7 @@
 // Vitals rules with no UI: the safety limits, the checks, and the mission radiation total.
 // Every limit comes from a real medical or NASA source (listed in LIMIT_NOTES, shown on the page).
 // Levels: 'ok' (normal), 'caution' (keep an eye on it), 'danger' (act now).
+import { ALL_PLACES, type Place } from '../../lib/space'
 import type { Check, Level, VitalKey, Vitals, VitalsRecord } from './types'
 
 // ---- The limits ----------------------------------------------------------------
@@ -39,9 +40,17 @@ export const MISSION_DOSE = { caution: CAREER_LIMIT_MSV * 0.8, danger: CAREER_LI
 export const SUPPLY_DAYS = { caution: 30, danger: 7 }
 
 // Typical daily dose by world, mSv/day. Used by the "Read sensors" demo and shown for comparison.
-// Earth: ~2.4 mSv/year world average. Station: ISS, ~0.5/day. Moon: Chang'e 4 measured 1.37/day.
+// Measured: Earth ~2.4 mSv/year world average. Station: ISS, ~0.5/day. Moon: Chang'e 4 measured 1.37/day.
 // Mars: Curiosity measured 0.64/day on the surface.
-export const BACKGROUND_DOSE = { earth: 0.0066, station: 0.5, moon: 1.37, mars: 0.64 } as const
+// Everywhere else there's no surface measurement, so we use the deep-space level Curiosity measured
+// on the way to Mars (1.84/day). Real surfaces can be far worse (Europa's is thousands of mSv a day
+// from Jupiter's belts), which is why colonies there would live under ice or rock.
+export const DEEP_SPACE_DOSE = 1.84
+const MEASURED_DOSE = { earth: 0.0066, station: 0.5, moon: 1.37, mars: 0.64 } as const
+export const DOSE_MEASURED: ReadonlySet<Place> = new Set(Object.keys(MEASURED_DOSE) as Place[])
+export const BACKGROUND_DOSE: Record<Place, number> = Object.fromEntries(
+  ALL_PLACES.map((p) => [p, (MEASURED_DOSE as Record<string, number>)[p] ?? DEEP_SPACE_DOSE]),
+) as Record<Place, number>
 
 // ---- What each number field is, and what values are possible at all ------------
 // min/max here catch typos (a heart rate of 700), not health problems.

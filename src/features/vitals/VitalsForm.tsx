@@ -3,7 +3,7 @@
 // After saving, the page shows the result in a pop-up (ReadingResult.tsx) instead of below the form.
 import { useState } from 'react'
 import { useMutations } from 'deepspace'
-import { BODY_LABELS, type Body } from '../../lib/space'
+import { BODY_LABELS, type Place } from '../../lib/space'
 import { FIELDS, VITAL_KEYS, readingProblem } from './limits'
 import { simulateReading, type PreviousSupplies } from './simulate'
 import type { VitalKey, Vitals } from './types'
@@ -40,7 +40,7 @@ function NumberField({ k, value, onChange, label }: { k: VitalKey; value: string
 }
 
 export default function VitalsForm({ home, previous, onSaved }: {
-  home: Body
+  home: Place
   previous: PreviousSupplies
   onSaved: (reading: Vitals) => void // called after a successful save, with what was saved
 }) {

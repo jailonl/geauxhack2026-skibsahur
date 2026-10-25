@@ -4,6 +4,7 @@ import {
   checkBloodPressure, checkHeartRate, checkMissionDose, checkRadiationDay, checkSpo2, checkSupply,
   checkTemperature, latest, missionDose, readingProblem, worst,
 } from './limits'
+import { ALL_PLACES } from '../../lib/space'
 import { simulateReading } from './simulate'
 import type { VitalsRecord } from './types'
 
@@ -95,7 +96,7 @@ describe('form validation', () => {
     expect(readingProblem({ heartRate: 72, systolic: 120, diastolic: 80 })).toBeNull()
   })
   it('simulated readings are always valid', () => {
-    for (const body of ['earth', 'moon', 'mars', 'station'] as const) {
+    for (const body of ALL_PLACES) {
       for (let i = 0; i < 200; i++) expect(readingProblem(simulateReading(body))).toBeNull()
     }
   })

@@ -1,8 +1,8 @@
 // Shape of one vitals reading. Matches the columns in src/schemas/vitals-schema.ts.
-import type { Body } from '../../lib/space'
+import type { Place } from '../../lib/space'
 
 export type Vitals = {
-  body?: Body
+  body?: Place // where it was taken: any home world (see ALL_PLACES in src/lib/space.ts)
   heartRate?: number
   spo2?: number
   systolic?: number

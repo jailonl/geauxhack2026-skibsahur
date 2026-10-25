@@ -23,7 +23,7 @@ const LINKS = [
   { to: '/forums', label: 'Forums' },
   { to: '/messages', label: 'Messages' },
   { to: '/map', label: 'Map' },
-{ to: '/vitals', label: 'Vitals' },
+  { to: '/vitals', label: 'Vitals' },
   { to: '/signals', label: 'Signal map' },
   { to: '/notifications', label: 'Notifications' },
   { to: '/search', label: 'Search' },

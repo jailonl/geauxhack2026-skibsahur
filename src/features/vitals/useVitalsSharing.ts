@@ -4,7 +4,7 @@
 // - useShareVitals: sends a reading to people as a DM, with the same light-delay as Messages.
 import { useEffect, useMemo } from 'react'
 import { useAuth, useMutations, useQuery } from 'deepspace'
-import { lightDelaySeconds, type Body } from '../../lib/space'
+import { lightDelaySeconds, type Place } from '../../lib/space'
 import { useSettings } from '../settings/settings'
 import { OPERATORS } from '../social/operators'
 import { useMyProfile, useProfiles } from '../social/profiles'
@@ -53,14 +53,14 @@ export function useVitalsVisibility() {
 }
 
 /** Someone a reading can be sent to: a colonist, or an AI operator (who will answer in character). */
-export type ShareContact = { id: string; handle: string; name: string; body: Body; isOperator: boolean }
+export type ShareContact = { id: string; handle: string; name: string; body: Place; isOperator: boolean }
 
 export function useShareVitals() {
   const { profile: me } = useMyProfile()
   const profiles = useProfiles()
   const { defaultSpeed } = useSettings()
   const { ready, create } = useMutations<{
-    toId: string; participants: string[]; content: string; fromBody: Body; toBody: Body
+    toId: string; participants: string[]; content: string; fromBody: Place; toBody: Place
     deliverAt: number; speed: number; wantsReply: number
   }>('dms')
 
@@ -80,7 +80,7 @@ export function useShareVitals() {
     /** Sends one DM per person. Returns the longest wait until it arrives, in seconds. */
     async send(reading: Vitals, takenAt: string | number, to: ShareContact[]): Promise<number> {
       if (!me) throw new Error('Set up your profile first.')
-      const myBody: Body = me.homeBody ?? 'earth'
+      const myBody: Place = me.homeBody ?? 'earth'
       const content = shareMessage(reading, me, takenAt)
       const sentAt = Date.now()
       let longest = 0
