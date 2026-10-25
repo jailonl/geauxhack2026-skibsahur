@@ -49,7 +49,7 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Transmission cards:** every post shows which world it came from and how long its signal took to reach you.
 - **Notifications:** a bell with an unread count for likes, reposts, quotes, replies, direct messages, and forum replies.
 - **Search:** colonists, posts, forums, and threads.
-- **Vitals:** a private page (only you can read your readings) for heart rate, blood oxygen, blood pressure, body temperature, daily and mission radiation dose, and oxygen/water/food supplies. Each reading gets an 8-bit heart (full = good, half = warning, empty and blinking = danger) plus the level in words at real medical and NASA limits, with the reason in words and a trend line. "Log a reading", "Recent readings", and "Safety limits" open from buttons so the page stays uncluttered, and after you save a reading its results pop up. A "Read sensors" button fills in a believable reading for your home world (Moon, Mars, station, or Earth radiation levels) so the demo works without real hardware.
+- **Vitals:** a private page (only you can read your readings) for heart rate, blood oxygen, blood pressure, body temperature, daily and mission radiation dose, and oxygen/water/food supplies. Each reading gets an 8-bit heart (full = good, half = warning, empty and blinking = danger) plus the level in words at real medical and NASA limits, with the reason in words and a trend line. "Log a reading", "Recent readings", and "Safety limits" open from buttons so the page stays uncluttered, and after you save a reading its results pop up. Any reading can be **shared** by direct message with colonists or AI operators (it travels with the same light-delay as any DM), and a **Private / Public** setting (on the Vitals page and in Settings) decides whether your latest reading shows on your profile. Your reading history always stays private. A "Read sensors" button fills in a believable reading for your home world (Moon, Mars, station, or Earth radiation levels) so the demo works without real hardware.
 - **Accessibility:** a "Readable font" setting (Atkinson Hyperlegible, designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
 
 ### Tech stack
@@ -149,6 +149,11 @@ No AI was used to generate any image or video assets. The app contains no image 
 | `src/features/vitals/VitalsForm.tsx` | Generated the "Log a reading" form |
 | `src/pages/(app)/(protected)/vitals.tsx` | Generated the Vitals page: status banner, cards, and the form, history, and safety-limits panels that open from buttons |
 | `src/features/vitals/ReadingResult.tsx` | Generated the pop-up that shows a saved reading's results |
+| `src/schemas/vitals-public-schema.ts` | Generated the public vitals collection: one row per colonist who chose Public, deleted when they go back to Private |
+| `src/features/vitals/sharing.ts`, `sharing.test.ts` | Generated the shared-reading message text, the public profile snapshot, and their tests |
+| `src/features/vitals/useVitalsSharing.ts` | Generated the hooks for the Private/Public setting (keeps the profile copy up to date) and for sending a reading as DMs with light-delay |
+| `src/features/vitals/ShareDialog.tsx`, `VitalsPrivacy.tsx`, `ProfileVitals.tsx` | Generated the Share pop-up, the Private/Public switch, and the Vitals box on profiles |
+| `src/pages/(app)/u/[username].tsx`, `src/pages/(app)/preferences.tsx` | Added the public Vitals box to profiles and a Vitals section to Settings |
 | `src/nav.ts`, `src/components/AppShell.tsx`, `src/components/Navigation.tsx` | Added the Vitals link, breadcrumb, and icon (phone tab bar now has 5 tabs) |
 
 **Code (Points of interest, Jailon Living):**

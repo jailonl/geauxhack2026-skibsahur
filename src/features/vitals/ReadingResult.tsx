@@ -11,10 +11,11 @@ const HEADLINE = {
   danger: 'Danger. Act on the red readings now.',
 } as const
 
-export default function ReadingResult({ reading, onClose, onLogAnother }: {
+export default function ReadingResult({ reading, onClose, onLogAnother, onShare }: {
   reading: Vitals | null // null = closed
   onClose: () => void
   onLogAnother: () => void
+  onShare: () => void // opens the Share pop-up for this reading
 }) {
   const rows = reading ? checkReading(reading) : []
   const overall = worst(rows.map((r) => r.check.level))
@@ -50,6 +51,7 @@ export default function ReadingResult({ reading, onClose, onLogAnother }: {
 
       <Modal.Footer>
         <Button variant="ghost" onClick={onLogAnother}>Log another</Button>
+        <Button variant="outline" onClick={onShare}>Share</Button>
         <Button onClick={onClose}>Done</Button>
       </Modal.Footer>
     </Modal>

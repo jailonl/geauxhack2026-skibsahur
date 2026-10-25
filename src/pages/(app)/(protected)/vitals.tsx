@@ -2,19 +2,24 @@
 // It's under (protected), so you have to be signed in, and the schema only lets you read your own
 // readings (see src/schemas/vitals-schema.ts). Live: a reading saved on another device shows up here.
 // The form, history, and limits open from buttons; a saved reading's result pops up (ReadingResult.tsx).
+// Readings can be shared by DM (ShareDialog.tsx), and the Private / Public switch puts your latest
+// reading on your profile (VitalsPrivacy.tsx).
 import { useState } from 'react'
-import { useAuth, useMutations, useQuery } from 'deepspace'
+import { useMutations } from 'deepspace'
 import Block from '../../../components/Block'
 import { useMyProfile } from '../../../features/social/profiles'
 import VitalCard, { LevelBadge, timeAgo } from '../../../features/vitals/VitalCard'
 import ReadingResult from '../../../features/vitals/ReadingResult'
+import ShareDialog, { type ShareTarget } from '../../../features/vitals/ShareDialog'
+import { useMyVitals } from '../../../features/vitals/useVitalsSharing'
+import VitalsPrivacy from '../../../features/vitals/VitalsPrivacy'
 import VitalsForm from '../../../features/vitals/VitalsForm'
 import {
   BACKGROUND_DOSE, CAREER_LIMIT_MSV, LIMIT_NOTES,
   checkBloodPressure, checkHeartRate, checkMissionDose, checkRadiationDay, checkReading, checkSpo2,
   checkSupply, checkTemperature, history, latest, missionDose, worst,
 } from '../../../features/vitals/limits'
-import type { Check, VitalKey, Vitals, VitalsRecord } from '../../../features/vitals/types'
+import type { Check, VitalKey, Vitals } from '../../../features/vitals/types'
 import { BODY_LABELS, PLANET_COLORS } from '../../../lib/space'
 
 const fmt = (n: number, places = 0) => n.toFixed(places)
@@ -27,17 +32,14 @@ const PANELS: { id: Panel; label: string }[] = [
 ]
 
 export default function VitalsPage() {
-  const { userId } = useAuth()
   const { profile } = useMyProfile()
   const home = profile?.homeBody ?? 'earth'
   const [panel, setPanel] = useState<Panel | null>(null) // which tool is open (none at first)
-  const [saved, setSaved] = useState<Vitals | null>(null) // the reading shown in the pop-up
+  const [saved, setSaved] = useState<ShareTarget | null>(null) // the reading shown in the result pop-up
+  const [sharing, setSharing] = useState<ShareTarget | null>(null) // the reading in the Share pop-up
 
-  const { records: raw, status, error } = useQuery<Vitals>('vitals', { orderBy: 'createdAt', orderDir: 'desc', limit: 500 })
+  const { records, status, error } = useMyVitals() // your own readings, newest first
   const { ready, remove } = useMutations<Vitals>('vitals')
-
-  // The server already only sends your own rows; filtering again keeps it safe if that ever changes.
-  const records = (raw as VitalsRecord[]).filter((r) => r.createdBy === userId)
 
   // One helper per simple card: latest value + its check + trend.
   function card(key: VitalKey, checkFn: (v: number) => Check, places = 0) {
@@ -92,9 +94,9 @@ export default function VitalsPage() {
       <header>
         <h1 className="font-display text-2xl text-primary">Vitals</h1>
         <p className="text-sm text-muted-foreground">
-          Private: only you can see these. Readings from{' '}
-          <span style={{ color: PLANET_COLORS[home] }}>{BODY_LABELS[home]}</span>.
+          Readings from <span style={{ color: PLANET_COLORS[home] }}>{BODY_LABELS[home]}</span>.
         </p>
+        <VitalsPrivacy className="mt-2" />
       </header>
 
       {status === 'error' && <p role="alert" className="text-destructive">Could not load your vitals: {error}</p>}
@@ -191,7 +193,7 @@ export default function VitalsPage() {
               }}
               onSaved={(reading) => {
                 setPanel(null) // close the form; the result pops up instead
-                setSaved(reading)
+                setSaved({ reading, takenAt: Date.now() })
               }}
             />
           </Block>
@@ -218,7 +220,7 @@ export default function VitalsPage() {
                       <th scope="col" className="p-1.5 font-normal">Rad</th>
                       <th scope="col" className="p-1.5 font-normal">O2 / H2O / Food</th>
                       <th scope="col" className="p-1.5 font-normal">Status</th>
-                      <th scope="col" className="p-1.5 font-normal"><span className="sr-only">Delete</span></th>
+                      <th scope="col" className="p-1.5 font-normal"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody className="font-signal tabular-nums">
@@ -239,7 +241,15 @@ export default function VitalsPage() {
                           <td className="p-1.5">{dash(v.radiation, 2)}</td>
                           <td className="p-1.5">{dash(v.oxygenDays)} / {dash(v.waterDays)} / {dash(v.foodDays)}</td>
                           <td className="p-1.5"><LevelBadge level={level} /></td>
-                          <td className="p-1.5 text-right">
+                          <td className="whitespace-nowrap p-1.5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setSharing({ reading: v, takenAt: r.createdAt })}
+                              className="mr-3 text-primary underline"
+                              aria-label={`Share reading from ${timeAgo(r.createdAt)}`}
+                            >
+                              Share
+                            </button>
                             {ready && (
                               <button
                                 type="button"
@@ -304,13 +314,18 @@ export default function VitalsPage() {
       )}
 
       <ReadingResult
-        reading={saved}
+        reading={saved?.reading ?? null}
         onClose={() => setSaved(null)}
         onLogAnother={() => {
           setSaved(null)
           setPanel('log')
         }}
+        onShare={() => {
+          setSharing(saved)
+          setSaved(null)
+        }}
       />
+      <ShareDialog target={sharing} onClose={() => setSharing(null)} />
     </div>
   )
 }

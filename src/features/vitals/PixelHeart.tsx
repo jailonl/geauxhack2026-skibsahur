@@ -3,6 +3,7 @@
 // The shape tells the level on its own (not only the color), and screen readers get the word.
 // Drawn from the 9×8 grid below as square SVG pixels, no image files.
 import { cn } from '../../lib/utils'
+import { LEVEL_TEXT } from './limits'
 import type { Level } from './types'
 
 // O = outline, F = inside of the heart, H = shine pixel, . = empty
@@ -17,7 +18,7 @@ const GRID = [
   '....O....',
 ]
 
-export const LEVEL_TEXT: Record<Level, string> = { ok: 'Good', caution: 'Warning', danger: 'Danger' }
+export { LEVEL_TEXT } // the words live in limits.ts so non-React code can use them too
 
 const FILL: Record<Level, string> = { ok: '#34d399', caution: '#fbbf24', danger: '#ef4444' }
 

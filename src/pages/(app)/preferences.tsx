@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { signOut } from 'deepspace'
 import { resetSettings, speak, updateSettings, useSettings, type Settings } from '../../features/settings/settings'
 import { useMyProfile } from '../../features/social/profiles'
+import VitalsPrivacy from '../../features/vitals/VitalsPrivacy'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -146,6 +147,17 @@ export default function PreferencesPage() {
             { value: 60, label: '60× demo' },
           ]}
         />
+      </Section>
+
+      <Section title="Vitals">
+        {isSignedIn ? (
+          <div>
+            <p className="mb-2">Who can see your vitals</p>
+            <VitalsPrivacy />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Sign in to choose who can see your vitals.</p>
+        )}
       </Section>
 
       <Section title="Account">

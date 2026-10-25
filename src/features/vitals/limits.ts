@@ -123,6 +123,9 @@ export function checkSupply(days: number): Check {
   return OK('Stocked')
 }
 
+/** The level in words (shown next to or instead of the 8-bit heart). */
+export const LEVEL_TEXT: Record<Level, string> = { ok: 'Good', caution: 'Warning', danger: 'Danger' }
+
 const RANK: Record<Level, number> = { ok: 0, caution: 1, danger: 2 }
 
 /** The most serious level in a list (ok if the list is empty). */
