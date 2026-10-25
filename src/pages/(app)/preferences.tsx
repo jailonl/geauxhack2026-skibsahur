@@ -114,7 +114,9 @@ export default function PreferencesPage() {
       </Section>
 
       <Section title="Feed">
-        <Toggle label="Show bot posts" hint="Habitat computers, rovers, relays, and unexplained signals." checked={s.showBots} onChange={(showBots) => set({ showBots })} />
+        {isSignedIn && (
+          <Toggle label="Show bot posts" hint="Colony chatter, habitat computers, rovers, and relays." checked={s.showBots} onChange={(showBots) => set({ showBots })} />
+        )}
         <Choice
           label="Alien chatter"
           value={s.alienChatter}

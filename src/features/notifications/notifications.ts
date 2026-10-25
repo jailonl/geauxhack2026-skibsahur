@@ -20,8 +20,8 @@ export type Notification = {
   at: number // ms timestamp
 }
 
-export type ForumThreadRec = { recordId: string; data: { forum: string; title: string; botName?: string }; createdBy: string; createdAt: string }
-export type ForumCommentRec = { recordId: string; data: { threadId: string; parentId?: string; text: string; botName?: string }; createdBy: string; createdAt: string }
+export type ForumThreadRec = { recordId: string; data: { forum: string; title: string; text?: string; authorName?: string; botName?: string }; createdBy: string; createdAt: string }
+export type ForumCommentRec = { recordId: string; data: { threadId: string; parentId?: string; text: string; authorName?: string; botName?: string }; createdBy: string; createdAt: string }
 export type DmRec = { recordId: string; data: { toId: string; content: string; deliverAt: number; isOperator?: number | boolean; fromId?: string }; createdBy: string; createdAt: string }
 
 function actorFromUser(userId: string, profiles: Profiles): Actor {

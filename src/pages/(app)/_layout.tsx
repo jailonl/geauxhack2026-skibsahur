@@ -34,7 +34,8 @@ export default function AppLayout() {
       <title>{APP_NAME}</title>
       <AuthBoot>
         <SocialProvider>
-        <div className="flex h-screen flex-col overflow-hidden bg-background">
+        {/* h-dvh = the visible screen height, so phone browser toolbars never hide the bottom tab bar */}
+        <div className="flex h-dvh flex-col overflow-hidden bg-background">
           <Navigation />
           {/* pb-24 leaves room for the phone tab bar and floating Post button */}
           <main className="min-h-0 flex-1 overflow-y-auto pb-24 md:pb-8">

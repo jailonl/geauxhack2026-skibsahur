@@ -17,6 +17,7 @@ import {
 import { pickPersona, toBotPost } from './features/comms/bots'
 import { colonistFor } from './features/forums/colonists'
 import { FORUMS } from './features/forums/forums'
+import { addPoiThreads, type Poi } from './features/forums/poiThreads'
 import { findOperator, type Operator } from './features/social/operators'
 import { lightDelaySeconds, type Body } from './lib/space'
 
@@ -80,6 +81,12 @@ export async function runTask(name: string, env: Env): Promise<void> {
   }
 
   if (name === 'forum-chatter') {
+    // New map POIs get a forum thread (no AI, so this also runs in local dev).
+    try {
+      await threadsForNewPois(ctx)
+    } catch (err) {
+      console.error(`[forum-chatter] POI threads failed: ${describeError(err)}`)
+    }
     if (isLocalDev(env)) return
     try {
       await forumChatter(env, ctx)
@@ -244,6 +251,20 @@ type ThreadData = { forum: string; title: string; text?: string }
 type CommentData = { threadId: string; text: string; authorName?: string; botName?: string }
 
 /** One bot colonist either starts a new thread or joins a recent one, in a random forum. */
+/** Start a forum thread for up to 3 map POIs that don't have one yet (src/features/forums/poiThreads.ts). */
+async function threadsForNewPois(ctx: Ctx): Promise<void> {
+  const added = await addPoiThreads(
+    {
+      pois: async () => ((await ctx.records.query('pois', { limit: 500 })) as StoredRecord<Poi>[]).map((r) => r.data),
+      threadTitles: async () => ((await ctx.records.query('threads', { limit: 2000 })) as StoredRecord<ThreadData>[]).map((r) => r.data.title),
+      create: async (collection, data) => ((await ctx.records.create(collection, data)) as { recordId?: string } | null)?.recordId ?? null,
+    },
+    FORUMS.map((f) => f.slug),
+    3,
+  )
+  if (added.threads > 0) console.log(`[forum-chatter] started ${added.threads} thread(s) for map POIs`)
+}
+
 async function forumChatter(env: Env, ctx: Ctx): Promise<void> {
   const forum = FORUMS[Math.floor(Math.random() * FORUMS.length)]
   const threads = (await ctx.records.query('threads', { where: { forum: forum.slug }, limit: 8 })) as StoredRecord<ThreadData>[]

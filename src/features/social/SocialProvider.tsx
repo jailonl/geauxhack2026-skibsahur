@@ -1,6 +1,6 @@
 // Loads the shared data ONCE for the whole app and hands it to every page through context:
-// profiles, posts + likes/reposts, my direct messages, and recent forum activity. Notifications and the
-// Colony pulse are worked out from the same data, so nothing is fetched twice.
+// profiles, posts + likes/reposts, my direct messages, and recent forum activity. Notifications, the forum
+// list, and the side menu are worked out from the same data, so nothing is fetched twice.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useAuth, useQuery } from 'deepspace'
 import { FeedContext, useFeedQuery } from '../comms/feedData'
@@ -33,7 +33,7 @@ export default function SocialProvider({ children }: { children: ReactNode }) {
   const profiles = useProfilesQuery()
   const feed = useFeedQuery()
   const dms = useQuery('dms', { where: { toId: userId ?? '__signed_out__' }, orderBy: 'createdAt', orderDir: 'desc', limit: 300 })
-  const threads = useQuery('threads', { orderBy: 'createdAt', orderDir: 'desc', limit: 200 })
+  const threads = useQuery('threads', { orderBy: 'createdAt', orderDir: 'desc', limit: 500 })
   const comments = useQuery('comments', { orderBy: 'createdAt', orderDir: 'desc', limit: 1000 })
   const now = useSlowClock()
 

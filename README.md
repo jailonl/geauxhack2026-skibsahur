@@ -30,10 +30,14 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 
 - **Welcome page:** a "Press Enter: Stellar" title screen (enter Stellar: interstellar) over a twinkling pixel starfield (tiny squares placed by code, no image). Press Enter anywhere, or the button, to go in. Below it, the page explains the app, shows live signal times and alien chatter, and offers GitHub/Google sign-in or a look around without an account.
 - **Home feed:** posts with photos/videos and optional location tags, updated in real time. Reply, quote, like, and repost; reposts appear in the timeline. Anyone can read; posting needs an account.
+- **World tabs and sort:** each tab (Mars, Moon, Earth, Orbit) shows posts from that world, by location tag or else where the author lives. Sort by newest, most liked, or most replies. Only 30 posts are drawn at a time ("Show more" adds 30), so the feed stays smooth on slow phones.
+- **Colony chatter:** the bot colonists on each world post everyday life updates (greenhouse harvests, Earthrise, launch windows) about every 12 seconds, so every tab always has something to read. Our own fill-in-the-blank generator, no AI and nothing saved; always badged "Bot".
+- **Forum threads from the map:** every point of interest on the map gets a forum thread in its world's board (hazard reports, colony check-ins, resource finds, unknown objects), started by a bot colonist with two replies. New POIs get a thread within 20 minutes; admins can also add them right away with "Seed the forums".
+- **Guest view:** visitors who are not signed in see everything but the account controls: no "Show bots" switch, no notifications, no admin tools. Forums with no threads yet are hidden.
 - **Feed refresh:** new posts flow in live while you are at the top of the feed. If you have scrolled down to read, they wait (so nothing jumps under you) and a "new transmissions" button and the Refresh button show how many are waiting.
-- **Alien chatter:** six alien species on real worlds (Mars, Europa, Titan, Io, Enceladus, Proxima b) post in their own languages every few seconds, with a Translate button. Written by our own generator, with no AI service (see "How the aliens work" under Extras). Every viewer sees the same aliens at the same moment, and nothing is saved to the database.
+- **Alien chatter:** six alien species on real worlds (Mars, Europa, Titan, Io, Enceladus, Proxima b) post in their own languages about every 10 seconds (Lively, Calm, or Off in Settings), with a Translate button. Written by our own generator, with no AI service (see "How the aliens work" under Extras). Every viewer sees the same aliens at the same moment, and nothing is saved to the database.
 - **Pixel look:** pixel fonts, chunky pixel frames, and buttons that press down, made entirely with CSS and fonts (no images). The logo is the word "Stellar" in a pixel font.
-- **Moodle-style layout:** a left navigation drawer, breadcrumbs (Stellar > Forums > p/Mars > thread), and info blocks down the right side (colony pulse, signal times, colonists). On phones these become a bottom tab bar and blocks below the page.
+- **Moodle-style layout:** a left navigation drawer, breadcrumbs (Stellar > Forums > p/Mars > thread), and info blocks down the right side (signal times, colonists). On phones these become a bottom tab bar and blocks below the page.
 - **Profiles:** unique @username, profile picture, bio, home planet, and accent color. Public profile pages list posts and replies, with a Message button.
 - **Messages:** private DMs by @username. Messages travel at light speed between the sender's and recipient's home planets, with a live countdown. AI operators (@hab-os on Mars, @shackleton-ops on the Moon, @capcom on Earth, @station-ai in orbit) answer every DM in character and remember the conversation.
 - **Forums:** 16 boards laid out like a Moodle course: collapsible sections, a discussion table per board (Started by, Replies, Score, Last post), and replies in their own "Re:" boxes, indented under the post they answer. Boards come in three groups: home worlds (p/Mars, p/Moon, p/Earth, p/Orbit), fictional outer colonies (Europa, Titan, Ceres, Ganymede, the Kuiper Belt, Proxima b), and lounges (p/Random, p/AskAColonist, p/SpaceKitchen, and more). Threads, comments, replies, up/down votes, Top/New sorting, and trending threads.
@@ -43,7 +47,6 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Colony bots:** habitat computers, rovers, a network relay, and alien signals post to the feed every 10 minutes in character and sometimes reply to people's posts, written by DeepSpace AI and clearly badged as bots
 - **Living forums:** twelve bot colonists (a Europa ice diver, a Titan dock worker, a Ceres welder, and more) start threads and comment in the forums every 20 minutes, always badged as bots. Admins can fill every board with starter conversations instantly (fixed text, no AI credits).
 - **Transmission cards:** every post shows which world it came from and how long its signal took to reach you.
-- **Colony pulse:** a live log of the latest posts, replies, threads, and comments across every world.
 - **Notifications:** a bell with an unread count for likes, reposts, quotes, replies, direct messages, and forum replies.
 - **Search:** colonists, posts, forums, and threads.
 - **Vitals:** personal health and supply readings with color-coded warnings
@@ -113,7 +116,7 @@ No AI was used to generate any image or video assets. The app contains no drawn 
 | `src/features/notifications/notifications.ts`, `src/pages/(app)/notifications.tsx` | Generated notifications (derived from existing data) and the Notifications page |
 | `src/pages/(app)/search.tsx` | Generated the search page |
 | `src/features/social/SocialProvider.tsx` (update) | Shares profiles, posts, reactions, DMs, and forum activity app-wide (one subscription each) |
-| `src/features/home/ColonyPulse.tsx` | Generated the live activity column |
+| `src/features/home/ColonyPulse.tsx` | Generated the live activity column (later removed to reduce clutter) |
 | `src/features/forums/colonists.ts`, `seed.ts`, `ForumAuthor.tsx` | Generated the bot colonist cast, starter forum conversations, and bot-aware author labels |
 | `src/features/comms/PostCard.tsx`, `Feed.tsx`, `src/components/Navigation.tsx` (redesign) | Generated the transmission-card design, world filter, and top navigation bar |
 | `src/features/comms/ai.ts`, `src/cron.ts`, `src/actions/index.ts` (updates) | Added AI bot replies, forum chatter, and the admin `seedForums` action |
@@ -125,6 +128,12 @@ No AI was used to generate any image or video assets. The app contains no drawn 
 | `src/features/comms/Feed.tsx`, `PostCard.tsx` (updates) | Added alien posts, the refresh button and waiting-posts button, and skipped re-rendering unchanged cards |
 | `src/features/settings/settings.ts`, `src/pages/(app)/preferences.tsx` (updates) | Added the alien chatter setting |
 | `src/pages/index.tsx`, `src/seo.ts`, `src/features/home/Starfield.tsx` (landing page) | Generated the welcome page: sign-in, live signal times, alien chatter preview, feature tiles, and how to join |
+| `src/features/chatter/*` | Generated the shared 3-second slot clock, the colony chatter generator, and its post card |
+| `src/features/aliens/latest.ts` (replaces `useAlienStream.ts`) | Reworked the alien stream onto the shared clock |
+| `src/features/forums/poiThreads.ts`, `src/actions/index.ts`, `src/cron.ts` (updates) | Generated forum threads for map POIs, added to "Seed the forums" and the forum-chatter job |
+| `src/features/comms/Feed.tsx`, `feedData.ts` (updates) | World tabs by origin, sort menu, colony chatter, guest-only controls, and 30-at-a-time paging |
+| `src/components/AppShell.tsx`, `forums/index.tsx`, `forums/[body].tsx`, `SocialProvider.tsx` (updates) | Removed the Colony pulse block, hid empty forums and guest-only links, and shared forum data instead of separate large downloads |
+| `src/pages/(app)/_layout.tsx`, `Navigation.tsx`, `SignIn.tsx`, `ComposeDialog.tsx`, `index.tsx` (performance) | Phone-safe screen height, removed blur effects that slow down weak devices, smaller title on small screens |
 
 **Code (Vitals):** _list AI-assisted files, or write "No AI used."_
 
