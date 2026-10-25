@@ -1,4 +1,5 @@
 // Signal map: pick any two places and see how long light (and so a message) takes between them right now,
+// whether humans can survive at the destination,
 // on a top-down map of the solar system drawn from the same orbit math (src/lib/space.ts).
 // The map squeezes distances (square-root scale) so the Kuiper Belt fits on screen; other stars are shown
 // as arrows at the edge, pointing the way they really are. Nothing here is a picture: it's drawn by code.
@@ -8,6 +9,7 @@ import {
   BODY_LABELS, MAP_ORBITS, PLACE_GROUPS, PLANET_COLORS, formatDelay, hostOf, hostPositionAU, lightDelaySeconds, positionAU,
   type Host, type Place,
 } from '../../lib/space'
+import { HabitabilityCard } from './Habitability'
 
 const SIZE = 360 // SVG units
 const CENTER = SIZE / 2
@@ -108,6 +110,7 @@ export default function SignalMap({ initialFrom = 'earth', initialTo = 'mars' }:
             </>
           )}
         </div>
+        <HabitabilityCard place={to} />
         <p className="text-xs text-muted-foreground">
           Planet positions are worked out for today. The map squeezes distances so the outer solar system fits; the
           numbers are not squeezed.

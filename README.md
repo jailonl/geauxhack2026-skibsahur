@@ -1,34 +1,46 @@
 # Stellar
 
-A social network for people living off Earth: colonists post photos, videos, and reports from their surroundings, reply to and quote each other, message across planets with real light-delay, discuss on per-planet forums, track their own vitals, and mark hazards and points of interest on a shared map.
+Off Earth, staying alive depends on staying in touch. Stellar is a communication app for colonists on the Moon, Mars, orbital stations, and the outer colonies: warn each other about hazards on a shared map, reach mission operators for help, share vitals checked against real safety limits, and talk in planet forums, with every message timed to the real speed of light from where the planets are today. It also shows whether humans can survive at each place.
 
 ## Team
 
-- [Vilarian Breaux](https://github.com/) — Comms (feed, profiles, messages, forums, AI bots)
-- [Brandon Richard](https://github.com/) — Vitals
-- [Jailon Living](https://github.com/) — Points of interest map
+[Vilarian Breaux](https://github.com/commonvtake), [Jailon Living](https://github.com/jailonl), [Brandon Richard](https://github.com/bjrichard05)
+
+Vilarian: comms (feed, profiles, messages, forums, bots, signal map). Jailon: points of interest map. Brandon: vitals.
 
 ## About
+
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Cloudflare](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=Cloudflare&logoColor=white)
+![DeepSpace](https://img.shields.io/badge/DeepSpace-10132B?style=for-the-badge&logoColor=white)
 
 **Team name:** Skib Sahur · **Prompt:** _#_
 
 ### What we built and the problem it solves
 
-People living on the Moon, Mars, or a space station are isolated, face hazards that change daily, and can wait many minutes for a message to reach Earth. Stellar gives them one place to share what they see, warn each other about hazards, and keep an eye on their own health and supplies.
+People living on the Moon, Mars, or a space station are isolated, face hazards that change daily, and can wait many minutes for a message to reach Earth. Stellar gives them one place to share what they see, warn each other about hazards, watch their own health and supplies, and keep in touch across the solar system, with every delay worked out from real orbital positions so they always know how long a reply will take.
 
 **Goals**
 
-- [ ] Colonists can post text, photos, and videos that everyone sees live
-- [ ] Posts can be tagged with a location (body, latitude, longitude) and appear on the shared map
-- [ ] Users can mark points of interest and hazards on the map with a description
-- [ ] Users can see their own vitals, with warnings at real safety limits
-- [ ] Direct messages between colonists show realistic light-delay based on each person's home planet
-- [ ] Colonists have profiles and can reply to, quote, like, and repost each other's posts
-- [ ] Each location has its own forum for longer discussions
+- [x] Colonists can post text, photos, and videos that everyone sees live
+- [x] Posts can be tagged with a location (body, latitude, longitude) and opened on the shared map
+- [x] Users can mark points of interest and hazards on the map with a description
+- [x] Users can see their own vitals, with warnings at real safety limits
+- [x] Direct messages between colonists show realistic light-delay based on each person's home world
+- [x] Colonists have profiles and can reply to, quote, like, and repost each other's posts
+- [x] Each location has its own forum for longer discussions
+
+### Tech stack
+
+[DeepSpace](https://docs.deep.space/): React + Vite frontend, real-time database, logins, file storage, scheduled jobs, and hosting on Cloudflare Workers (TypeScript, Tailwind CSS).
 
 ### Features
 
-- **Welcome page:** a "Press Enter: Stellar" title screen (enter Stellar: interstellar) over a twinkling pixel starfield (tiny squares placed by code, no image). Press Enter anywhere, or the button, to go in. Below it, the page explains the app, shows live signal times and alien chatter, and offers GitHub/Google sign-in or a look around without an account.
+- **Can humans live there?:** gravity, temperature, air, radiation, water, and the biggest danger for all 13 places, with a verdict (only Earth is livable outdoors; Io is not survivable; Europa's surface is deadly from radiation). Shown for the destination on the Signal map and as a list on the welcome page. Data in `src/lib/habitability.ts`.
+- **Welcome page:** a "Press Enter: Stellar" title screen (enter Stellar: interstellar) over a twinkling pixel starfield (tiny squares placed by code, no image). Press Enter anywhere, or the button, to go in. Below it, the page explains why communication keeps colonists alive, shows how far help is right now (signal map) and whether humans can survive each place, previews the alien chatter, and offers GitHub/Google sign-in or a look around without an account.
 - **Home feed:** posts with photos/videos and optional location tags, updated in real time. Reply, quote, like, and repost; reposts appear in the timeline. Anyone can read; posting needs an account.
 - **Signal map:** pick any two of 13 places (Earth, Moon, the station, Mars, Ceres, Europa, Ganymede, Io, Titan, Enceladus, a Kuiper Belt freighter, Proxima b, Alpha Centauri B) and see the light delay between them right now, when a message sent now arrives, and how soon a reply could come back, on a solar-system map drawn from the same orbit math. On the welcome page and at /signals.
 - **Live anywhere:** profiles can choose any of those 13 places as home, and every light delay (posts, messages, profiles) uses the real distance between them.
@@ -43,9 +55,9 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Alien chatter:** six alien species on real worlds (Mars, Europa, Titan, Io, Enceladus, Proxima b) post in their own languages about every 10 seconds (Lively, Calm, or Off in Settings), with a Translate button. Written by our own generator, with no AI service (see "How the aliens work" under Extras). Every viewer sees the same aliens at the same moment, and nothing is saved to the database.
 - **Pixel look:** pixel fonts, chunky pixel frames, and buttons that press down, made entirely with CSS and fonts (no images). The logo is the word "Stellar" in a pixel font.
 - **Moodle-style layout:** a left navigation drawer, breadcrumbs (Stellar > Forums > p/Mars > thread), and info blocks down the right side (signal times, colonists). On phones these become a bottom tab bar and blocks below the page.
-- **Profiles:** unique @username, profile picture, bio, home planet, and accent color. Public profile pages list posts and replies, with a Message button.
+- **Profiles:** unique @username, profile picture, bio, home world (any of 13 places), and accent color. Public profile pages list posts and replies, with a Message button.
 - **Messages:** private DMs by @username. Messages travel at light speed between the sender's and recipient's home planets, with a live countdown. AI operators (@hab-os on Mars, @shackleton-ops on the Moon, @capcom on Earth, @station-ai in orbit) answer every DM in character and remember the conversation.
-- **Forums:** 16 boards laid out like a Moodle course: collapsible sections, a discussion table per board (Started by, Replies, Score, Last post), and replies in their own "Re:" boxes, indented under the post they answer. Boards come in three groups: home worlds (p/Mars, p/Moon, p/Earth, p/Orbit), fictional outer colonies (Europa, Titan, Ceres, Ganymede, the Kuiper Belt, Proxima b), and lounges (p/Random, p/AskAColonist, p/SpaceKitchen, and more). Threads, comments, replies, up/down votes, Top/New sorting, and trending threads.
+- **Forums:** 16 boards laid out like a Moodle course: collapsible sections, a discussion table per board (Started by, Replies, Score, Last post), and replies in their own "Re:" boxes, indented under the post they answer. Boards come in three groups: home worlds (p/Mars, p/Moon, p/Earth, p/Orbit), fictional outer colonies (Europa, Titan, Ceres, Ganymede, the Kuiper Belt, Proxima b), and lounges (p/Random, p/AskAColonist, p/SpaceKitchen, and more). Threads, comments, nested replies, up/down votes, sorting by latest activity, top, or newest, and trending threads.
 - **Signal times:** a live panel showing how long a message from your home world takes to reach every colony right now, from 1.3 seconds (the Moon) to 4.2 years (Proxima b).
 - **Settings:** theme (Night side / Day side), text size, high contrast, reduce motion, compact posts, bandwidth saver (photos load on tap), bot visibility, alien chatter (lively, calm, off), read-aloud buttons, and default message speed.
 - **Map:** points of interest and hazards marked by coordinates (colony, hazard, resource, unknown moving object)
@@ -56,10 +68,6 @@ People living on the Moon, Mars, or a space station are isolated, face hazards t
 - **Search:** colonists, posts, forums, and threads.
 - **Vitals:** a private page (only you can read your readings). Who you are depends on where you live: on Earth, the Moon, and the station you're human and get real medical limits; on every other world you're that world's alien (the Rhul on Mars, the Ossk on Titan, the Pyrrax on Io, and seven more) with its own limits, so a heart rate of 400 is deadly for a human but normal for a Pyrrax. You log heart rate, blood oxygen (or your species' blood gas), pressure, and temperature; radiation and oxygen/water/food are the colony's own live numbers, the same for everyone on that world, with occasional solar storms, recycler faults, and cargo that arrives on each world's real launch-window schedule. Radiation and supply limits change from world to world too (100 days of food is plenty on the Moon and an emergency on Mars). Every reading gets an 8-bit heart (full = good, half = warning, empty and blinking = danger) and a **survival rating**, your chance of survival as a percentage, with a "More info" button for the full breakdown. "Log a reading", "Recent readings", and "Safety limits" open from buttons. Any reading can be **shared** by direct message (with the same light-delay as any DM), and a **Private / Public** setting (on the Vitals page and in Settings) decides whether your latest reading shows on your profile.
 - **Accessibility:** a "Readable font" setting (Atkinson Hyperlegible, designed for low-vision readers), adjustable text size, high-contrast mode, reduce-motion, read-aloud for posts and messages (browser speech, no API), alt text on every photo/video, labeled form fields, visible keyboard focus
-
-### Tech stack
-
-- [DeepSpace](https://docs.deep.space/) — React + Vite frontend, real-time database, logins, file storage, and hosting (TypeScript, Tailwind)
 
 ### External tools and APIs
 
@@ -80,10 +88,7 @@ AI is used only for text. No AI-generated images or videos appear anywhere in th
 
 No AI was used to generate any image or video assets. The app contains no image files or drawn logos: the look comes from CSS and free pixel fonts, and the logo is plain text. The only drawn shape is the Vitals 8-bit heart, a 9×8 grid of square pixels written out in code (`src/features/vitals/PixelHeart.tsx`), not an image file. The only pictures are the planet terrain on the POI map, which is real NASA spacecraft imagery (credited under Extras), and photos users upload. No external code sources were given to AI to reference.
 
-
 **Tool:** Claude (Anthropic), through the claude.ai chat app and Claude Code.
-
-
 
 **Planning (no code):** brainstorming ideas for the prompt, choosing the stack, checking our plan against the rules and rubric, writing a build plan, and drafting this README.
 
@@ -145,6 +150,7 @@ No AI was used to generate any image or video assets. The app contains no image 
 | `src/features/comms/botImages.ts`, `bots.ts`, `src/cron.ts`, `src/schemas/dms-schema.ts`, `Messages.tsx`, `src/features/chatter/*` (updates) | Let bots and AI operators attach the team's own pictures |
 | `src/features/comms/PostComposer.tsx`, `PostCard.tsx` (updates) | Photo preview before posting, photo-only posts, clearer upload errors, bot pictures |
 | `src/schemas/profiles-schema.ts`, `src/features/social/ProfileEditor.tsx`, `profiles.ts` (updates) | All 13 places as home worlds |
+| `src/lib/habitability.ts`, `src/features/signals/Habitability.tsx`, `SignalMap.tsx`, `src/pages/index.tsx` (survival focus) | Generated the habitability data and cards, and reworked the welcome page around communication for survival |
 | `src/pages/index.tsx`, `Feed.tsx`, `src/themes.css` (readability) | Solid panels behind text over the starfield and in the feed header, brighter secondary text |
 
 **Code (Vitals, Brandon Richard):**
@@ -192,24 +198,26 @@ Every team member has read and can explain all AI-assisted code. Changes made af
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 22.15 or newer on the 22 line, or Node.js 24 or 26
-- npm
-- A GitHub or Google account (to sign in to DeepSpace)
+You need Node.js (22.15 or newer on the 22 line, or Node.js 24 or 26) with npm, and a GitHub or Google account to sign in to DeepSpace.
+
+```
+# check your versions
+node -v
+npm -v
+```
 
 ## Build from source
 
-```bash
+Clone the repo, install the packages, and start the local dev server. Open the link it prints: the welcome page opens first (press Enter to go in). Guests can read everything; sign in with GitHub or Google to post, reply, message, vote, or log vitals (the first sign-in creates your account, then you pick a @username).
+
+```
 git clone https://github.com/jailonl/geauxhack2026-skibsahur.git
 cd geauxhack2026-skibsahur
 npm install
 npx deepspace dev start
 ```
 
-Open the local link it prints; it opens the feed. Guests can read everything; sign in to post, reply, message, or vote.
-
-Sign in with GitHub or Google; the first sign-in creates your account, then you pick a @username.
-
-Photo and video uploads only work after the app has been deployed once (`npx deepspace deploy`), because local uploads need a token that the first deploy creates.
+Photo and video uploads only work locally after the app has been deployed once (`npx deepspace deploy`), because local uploads need a token that the first deploy creates. If a new page shows "Page not found" in local dev, stop the server, delete `node_modules/.vite` and `src/router.ts`, and start it again.
 
 ## Extras
 
@@ -220,6 +228,8 @@ Photo and video uploads only work after the app has been deployed once (`npx dee
 **POI map terrain:** NASA Solar System Treks (trek.nasa.gov). Moon: LRO WAC mosaic (NASA/GSFC/Arizona State University). Mars: Viking MDIM 2.1 (NASA/JPL/USGS). Europa and Ganymede: Voyager and Galileo SSI mosaics (NASA/JPL/USGS). Titan: Cassini ISS mosaic (NASA/JPL/Space Science Institute). Ceres: Dawn Framing Camera mosaic (NASA/JPL/DLR). NASA imagery is public domain.
 
 **Where the places are:** Earth, Mars, Jupiter, and Saturn use circular orbits from their real mean longitudes at J2000; Ceres and the Kuiper freighter use approximate starting points. Moons and the station circle their planet at their real distances. Proxima b (4.2465 light-years) and Alpha Centauri B (4.37 light-years) use their real sky positions. The map squeezes distances with a square root so it fits; the numbers are not squeezed.
+
+**Habitability numbers:** rounded from NASA planetary fact sheets and mission measurements (Curiosity's radiation on Mars, Chang'e 4 on the Moon, ISS dosimeters, Galileo-era estimates for Jupiter's moons). Proxima b's values are estimates, and Alpha Centauri B has no confirmed planet, so its colony is an orbiting habitat.
 
 **How the aliens work (no AI):** each species has its own list of sounds. To write a word in an alien language, we hash the English word together with the species name (FNV-1a) and use that number to seed a small random generator (Mulberry32), which picks the syllables. The same word always becomes the same alien word, so each language is consistent. The English sentences come from a fill-in-the-blank grammar: a template like "Ate #dish# for #meal#. #rating#" has each #word# replaced with a random choice from that word's list. Time is cut into 3-second slots, and each slot's random choices are seeded by the slot number, so every viewer sees the same aliens say the same things at the same time without saving anything. Signal delays use the same orbital math as the rest of the app.
 

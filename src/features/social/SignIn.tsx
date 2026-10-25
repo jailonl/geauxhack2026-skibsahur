@@ -37,7 +37,7 @@ export function SignInDialog({ onClose }: { onClose: () => void }) {
         <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 text-muted-foreground">
           ✕
         </button>
-        <h2 id="signin-title" className="mb-1 text-xl font-bold">Join the colony network</h2>
+        <h2 id="signin-title" className="mb-1 text-xl font-bold">Join Stellar</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           Sign in to post, reply, message, and vote. New here? Signing in creates your account, then you pick a @username.
         </p>
