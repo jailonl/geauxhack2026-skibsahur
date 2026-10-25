@@ -93,7 +93,7 @@ export default function VitalsPage() {
           role={overall === 'danger' ? 'alert' : 'status'}
           className="flex flex-wrap items-center gap-3 border bg-card p-3"
         >
-          <LevelBadge level={overall} className="text-xs" />
+          <LevelBadge level={overall} size={3} showLabel />
           <span>
             {overall === 'ok'
               ? 'All readings are in the normal range.'
@@ -224,9 +224,9 @@ export default function VitalsPage() {
             <thead className="text-muted-foreground">
               <tr>
                 <th scope="col" className="p-1.5 font-normal">Reading</th>
-                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="ok" /></th>
-                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="caution" /></th>
-                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="danger" /></th>
+                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="ok" showLabel /></th>
+                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="caution" showLabel /></th>
+                <th scope="col" className="p-1.5 font-normal"><LevelBadge level="danger" showLabel /></th>
                 <th scope="col" className="p-1.5 font-normal">Source</th>
               </tr>
             </thead>

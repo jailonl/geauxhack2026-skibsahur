@@ -1,25 +1,18 @@
-// One vital on the dashboard: latest value, a color-coded level with the reason in words
+// One vital on the dashboard: latest value, an 8-bit heart for the level with the reason in words
 // (so color is never the only signal), a small trend line, and when it was read.
-import { cn } from '../../lib/utils'
+import PixelHeart from './PixelHeart'
 import type { Check, Level } from './types'
 
-export const LEVEL_TEXT: Record<Level, string> = { ok: 'OK', caution: 'Watch', danger: 'Danger' }
+export const LEVEL_COLOR: Record<Level, string> = { ok: '#34d399', caution: '#fbbf24', danger: '#ef4444' }
 
-// Solid badge colors with dark/light text picked for contrast on both themes.
-export const LEVEL_BADGE: Record<Level, string> = {
-  ok: 'bg-emerald-400 text-black',
-  caution: 'bg-amber-400 text-black',
-  danger: 'bg-red-600 text-white',
-}
-
-export const LEVEL_COLOR: Record<Level, string> = { ok: '#34d399', caution: '#fbbf24', danger: '#dc2626' }
-
-export function LevelBadge({ level, className }: { level: Level; className?: string }) {
-  return (
-    <span className={cn('font-display px-1.5 py-0.5 text-[10px] uppercase tracking-wider', LEVEL_BADGE[level], className)}>
-      {LEVEL_TEXT[level]}
-    </span>
-  )
+/** The level as an 8-bit heart: full = good, half = warning, empty and blinking = danger. */
+export function LevelBadge({ level, className, showLabel, size }: {
+  level: Level
+  className?: string
+  showLabel?: boolean
+  size?: number
+}) {
+  return <PixelHeart level={level} className={className} showLabel={showLabel} size={size} />
 }
 
 /** "just now", "5 min ago", "3 h ago", "2 d ago" */
@@ -65,7 +58,7 @@ export default function VitalCard({ label, value, unit, check, trend = [], at, h
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm text-muted-foreground">{label}</h3>
-        {level && <LevelBadge level={level} />}
+        {level && <LevelBadge level={level} size={3} />}
       </div>
 
       {value == null ? (

@@ -82,7 +82,7 @@ export default function VitalsForm({ home, previous }: { home: Body; previous: P
       setMessage(
         flagged.length === 0
           ? 'Saved. Everything is in the normal range.'
-          : `Saved. ${level === 'danger' ? 'DANGER' : 'Watch'}: ` +
+          : `Saved. ${level === 'danger' ? 'Danger' : 'Warning'}: ` +
               flagged.map((c) => `${c.label} (${c.check.reason})`).join('; '),
       )
       setDraft(EMPTY)
