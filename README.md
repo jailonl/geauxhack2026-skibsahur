@@ -148,6 +148,8 @@ No AI was used to generate any image or video assets. The app contains no drawn 
 | `src/features/map/MapView.tsx` | Generated the clickable map that plots POIs by lat/lng, and the NASA terrain tiles with a tint in each tab's color |
 | `src/pages/(app)/map.tsx` | Generated the map page with planet tabs, the form, the POI list, and remove for owners and admins |
 | `src/features/map/types.ts`, `poi-logic.ts`, `PoiForm.tsx`, `map.tsx`, `src/schemas/poi-schema.ts` (update) | Added Europa, Titan, Ceres, and Ganymede as map tabs (map-only list), with tab colors taken from the forums |
+| `src/features/map/landmarks.ts` | Generated the list of real landmarks (Olympus Mons, Apollo 11, Huygens, etc.) with coordinates |
+| `src/features/map/MapView.tsx`, `src/pages/(app)/map.tsx`, `poi-logic.ts` (update) | Bigger landmark markers and labels; clicking a POI or landmark opens a details card (name, type, safety, coordinates, description, remove), closable with ✕, Esc, or a click on the map, and reachable by keyboard |
 | `src/nav.ts` | Added the Map link |
 
 I designed the POI data and logic in Java first (including the idea to work out "discovered" automatically from nearby POIs); AI turned it into React and TypeScript for this stack.
